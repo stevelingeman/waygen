@@ -5,10 +5,13 @@ export const downloadKMZ = async (waypoints, missionName = "MiniMission") => {
   const zip = new JSZip();
   const now = Date.now();
 
+  // 1. template.kml
+  // Added wpml:templateId to ensure linking
   const templateXML = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:wpml="http://www.dji.com/wpmz/1.0.2">
   <Document>
     <wpml:createTime>${now}</wpml:createTime>
+    <wpml:updateTime>${now}</wpml:updateTime>
     <wpml:missionConfig>
       <wpml:flyToWaylineMode>safely</wpml:flyToWaylineMode>
       <wpml:finishAction>goHome</wpml:finishAction>
@@ -20,9 +23,11 @@ export const downloadKMZ = async (waypoints, missionName = "MiniMission") => {
         <wpml:droneSubEnumValue>0</wpml:droneSubEnumValue>
       </wpml:droneInfo>
     </wpml:missionConfig>
+    <wpml:templateId>0</wpml:templateId>
   </Document>
 </kml>`;
 
+  // 2. waylines.wpml
   let placemarks = "";
   waypoints.forEach((wp, i) => {
     const isFirst = i === 0;
@@ -50,16 +55,18 @@ export const downloadKMZ = async (waypoints, missionName = "MiniMission") => {
         </wpml:action>
       </wpml:actionGroup>`;
 
+    // CHANGE 1: Added ",0" to coordinates (Longitude,Latitude,Altitude)
+    // CHANGE 2: Set HeadingAngleEnable to 0 (Let drone follow path automatically)
     placemarks += `
     <Placemark>
-      <Point><coordinates>${wp.lng},${wp.lat}</coordinates></Point>
+      <Point><coordinates>${wp.lng},${wp.lat},0</coordinates></Point>
       <wpml:index>${i}</wpml:index>
       <wpml:executeHeight>${wp.altitude}</wpml:executeHeight>
       <wpml:waypointSpeed>${wp.speed}</wpml:waypointSpeed>
       <wpml:waypointHeadingParam>
         <wpml:waypointHeadingMode>smoothTransition</wpml:waypointHeadingMode>
         <wpml:waypointHeadingAngle>${wp.heading}</wpml:waypointHeadingAngle>
-        <wpml:waypointHeadingAngleEnable>1</wpml:waypointHeadingAngleEnable>
+        <wpml:waypointHeadingAngleEnable>0</wpml:waypointHeadingAngleEnable>
         <wpml:waypointHeadingPathMode>followBadArc</wpml:waypointHeadingPathMode>
       </wpml:waypointHeadingParam>
       <wpml:useStraightLine>0</wpml:useStraightLine>
