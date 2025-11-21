@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder'; // Import Search
 import { CircleMode, DragCircleMode, DirectMode, SimpleSelectMode } from 'mapbox-gl-draw-circle';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css'; // Import Search CSS
 import { useMissionStore } from '../../store/useMissionStore';
 
 // Add your token in .env
@@ -68,7 +70,7 @@ export default function MapContainer({ onPolygonDrawn }) {
   
   // State for the visual selection box (CSS positioning)
   const [selectionBox, setSelectionBox] = useState(null);
-  const startPointRef = useRef(null); // Refs avoid re-renders during mousemove
+  const startPointRef = useRef(null); 
 
   useEffect(() => {
     if (map.current) return;
@@ -78,13 +80,23 @@ export default function MapContainer({ onPolygonDrawn }) {
       style: 'mapbox://styles/mapbox/satellite-streets-v12',
       center: [-98, 39], 
       zoom: 4,
-      boxZoom: false // Disable default box zoom to allow Shift+Drag selection
+      boxZoom: false 
     });
 
+    // 1. Initialize Search Bar (Geocoder)
+    const geocoder = new MapboxGeocoder({
+        accessToken: mapboxgl.accessToken,
+        mapboxgl: mapboxgl,
+        marker: false, // Do not add a blue marker on search result
+        collapsed: true // Expand when clicked
+    });
+    map.current.addControl(geocoder, 'top-right');
+
+    // 2. Initialize Draw Tools
     draw.current = new MapboxDraw({
       userProperties: true,
       displayControlsDefault: false,
-      styles: simpleStyles, // Fixes the Mapbox crash
+      styles: simpleStyles,
       modes: {
         ...MapboxDraw.modes,
         draw_circle: CircleMode,
@@ -95,6 +107,9 @@ export default function MapContainer({ onPolygonDrawn }) {
     });
     map.current.addControl(draw.current);
 
+    // 3. CRITICAL: Assign global variable HERE, after initialization
+    window.mapboxDraw = draw.current;
+
     map.current.on('draw.create', (e) => onPolygonDrawn(e.features[0]));
     map.current.on('draw.update', (e) => onPolygonDrawn(e.features[0]));
     map.current.on('draw.delete', () => onPolygonDrawn(null));
@@ -102,7 +117,6 @@ export default function MapContainer({ onPolygonDrawn }) {
     // --- Selection Logic ---
 
     map.current.on('click', (e) => {
-      // Prevent clearing selection if we just finished a drag
       if (e.originalEvent._isDrag) return;
 
       const features = map.current.queryRenderedFeatures(e.point, { layers: ['waypoints-layer'] });
@@ -121,35 +135,27 @@ export default function MapContainer({ onPolygonDrawn }) {
       }
     });
 
-    // --- Rubber Band Logic (Shift + Drag) ---
+    // --- Rubber Band Logic ---
 
     const onMouseMove = (e) => {
         if (!startPointRef.current) return;
-        
         const start = startPointRef.current;
         const current = e.point;
-
-        // Calculate box dimensions
         const minX = Math.min(start.x, current.x);
         const maxX = Math.max(start.x, current.x);
         const minY = Math.min(start.y, current.y);
         const maxY = Math.max(start.y, current.y);
 
         setSelectionBox({
-            left: minX,
-            top: minY,
-            width: maxX - minX,
-            height: maxY - minY
+            left: minX, top: minY, width: maxX - minX, height: maxY - minY
         });
     };
 
     const onMouseUp = (e) => {
         if (!startPointRef.current) return;
-
         const start = startPointRef.current;
         const end = e.point;
 
-        // If it was a tiny movement, treat as click (handled by click listener)
         if (Math.abs(start.x - end.x) < 5 && Math.abs(start.y - end.y) < 5) {
             startPointRef.current = null;
             setSelectionBox(null);
@@ -159,22 +165,18 @@ export default function MapContainer({ onPolygonDrawn }) {
             return;
         }
 
-        // Identify features inside the box
         const bbox = [start, end];
         const features = map.current.queryRenderedFeatures(bbox, { layers: ['waypoints-layer'] });
         const ids = features.map(f => f.properties.id);
         
         if (ids.length > 0) {
-            // If holding shift, ADD to selection, else REPLACE
             setSelectedIds(ids); 
         }
 
-        // Cleanup
         startPointRef.current = null;
         setSelectionBox(null);
         map.current.dragPan.enable();
         
-        // Flag to prevent the 'click' event from firing immediately after
         e.originalEvent._isDrag = true; 
         setTimeout(() => { if(e.originalEvent) delete e.originalEvent._isDrag }, 100);
 
@@ -187,7 +189,6 @@ export default function MapContainer({ onPolygonDrawn }) {
         e.preventDefault();
         map.current.dragPan.disable();
         startPointRef.current = e.point;
-        
         map.current.on('mousemove', onMouseMove);
         map.current.on('mouseup', onMouseUp);
       }
@@ -203,10 +204,7 @@ export default function MapContainer({ onPolygonDrawn }) {
       type: 'FeatureCollection',
       features: waypoints.map(wp => ({
         type: 'Feature',
-        properties: { 
-            id: wp.id, 
-            selected: selectedIds.includes(wp.id) 
-        },
+        properties: { id: wp.id, selected: selectedIds.includes(wp.id) },
         geometry: { type: 'Point', coordinates: [wp.lng, wp.lat] }
       }))
     };
@@ -254,13 +252,9 @@ export default function MapContainer({ onPolygonDrawn }) {
       });
   }, []);
 
-  // Expose drawing controls
-  window.mapboxDraw = draw.current; 
-
   return (
     <div className="relative w-full h-full">
         <div ref={mapContainer} className="w-full h-full" />
-        {/* Visual Selection Box */}
         {selectionBox && (
             <div
                 style={{
@@ -271,7 +265,7 @@ export default function MapContainer({ onPolygonDrawn }) {
                     height: selectionBox.height,
                     border: '2px solid #3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                    pointerEvents: 'none', // Allow mouse events to pass through to map
+                    pointerEvents: 'none',
                     zIndex: 20
                 }}
             />
