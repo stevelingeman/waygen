@@ -9,14 +9,66 @@ import { useMissionStore } from '../../store/useMissionStore';
 // Add your token in .env
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
+// Safe styles that avoid Mapbox GL JS "dasharray" crashes
+const simpleStyles = [
+  // ACTIVE (being drawn)
+  {
+    "id": "gl-draw-line",
+    "type": "line",
+    "filter": ["all", ["==", "$type", "LineString"], ["!=", "mode", "static"]],
+    "layout": { "line-cap": "round", "line-join": "round" },
+    "paint": { "line-color": "#3b82f6", "line-width": 2 }
+  },
+  {
+    "id": "gl-draw-polygon-fill",
+    "type": "fill",
+    "filter": ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
+    "paint": { "fill-color": "#3b82f6", "fill-outline-color": "#3b82f6", "fill-opacity": 0.2 }
+  },
+  {
+    "id": "gl-draw-polygon-stroke-active",
+    "type": "line",
+    "filter": ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
+    "layout": { "line-cap": "round", "line-join": "round" },
+    "paint": { "line-color": "#3b82f6", "line-width": 2 }
+  },
+  {
+    "id": "gl-draw-point-point-stroke-active",
+    "type": "circle",
+    "filter": ["all", ["==", "$type", "Point"], ["!=", "mode", "static"]],
+    "paint": { "circle-radius": 6, "circle-color": "#fff" }
+  },
+  {
+    "id": "gl-draw-point",
+    "type": "circle",
+    "filter": ["all", ["==", "$type", "Point"], ["!=", "mode", "static"]],
+    "paint": { "circle-radius": 4, "circle-color": "#3b82f6" }
+  },
+  // STATIC (finished shapes)
+  {
+    "id": "gl-draw-polygon-fill-static",
+    "type": "fill",
+    "filter": ["all", ["==", "$type", "Polygon"], ["==", "mode", "static"]],
+    "paint": { "fill-color": "#000", "fill-outline-color": "#000", "fill-opacity": 0.1 }
+  },
+  {
+    "id": "gl-draw-polygon-stroke-static",
+    "type": "line",
+    "filter": ["all", ["==", "$type", "Polygon"], ["==", "mode", "static"]],
+    "layout": { "line-cap": "round", "line-join": "round" },
+    "paint": { "line-color": "#000", "line-width": 2 }
+  }
+];
+
 export default function MapContainer({ onPolygonDrawn }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const draw = useRef(null);
   const { waypoints, selectedIds, selectWaypoint, setSelectedIds } = useMissionStore();
   
-  // Rubber band state
-  const [startBox, setStartBox] = useState(null);
+  // State for the visual selection box (CSS positioning)
+  const [selectionBox, setSelectionBox] = useState(null);
+  const startPointRef = useRef(null); // Refs avoid re-renders during mousemove
 
   useEffect(() => {
     if (map.current) return;
@@ -25,12 +77,14 @@ export default function MapContainer({ onPolygonDrawn }) {
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-streets-v12',
       center: [-98, 39], 
-      zoom: 4
+      zoom: 4,
+      boxZoom: false // Disable default box zoom to allow Shift+Drag selection
     });
 
     draw.current = new MapboxDraw({
       userProperties: true,
       displayControlsDefault: false,
+      styles: simpleStyles, // Fixes the Mapbox crash
       modes: {
         ...MapboxDraw.modes,
         draw_circle: CircleMode,
@@ -43,41 +97,99 @@ export default function MapContainer({ onPolygonDrawn }) {
 
     map.current.on('draw.create', (e) => onPolygonDrawn(e.features[0]));
     map.current.on('draw.update', (e) => onPolygonDrawn(e.features[0]));
+    map.current.on('draw.delete', () => onPolygonDrawn(null));
     
-    // Selection Logic
+    // --- Selection Logic ---
+
     map.current.on('click', (e) => {
-      // Click on empty map clears selection
-      if (e.defaultPrevented) return;
+      // Prevent clearing selection if we just finished a drag
+      if (e.originalEvent._isDrag) return;
+
       const features = map.current.queryRenderedFeatures(e.point, { layers: ['waypoints-layer'] });
+      
       if (features.length) {
         const id = features[0].properties.id;
         selectWaypoint(id, e.originalEvent.shiftKey);
-        e.preventDefault();
       } else {
-        setSelectedIds([]);
+        // Only clear if clicking on empty map (not drawing shapes)
+        const drawFeatures = map.current.queryRenderedFeatures(e.point, { 
+            layers: ['gl-draw-polygon-fill-static.cold', 'gl-draw-polygon-fill.hot'] 
+        });
+        if (drawFeatures.length === 0) {
+            setSelectedIds([]);
+        }
       }
     });
 
-    // Rubber Band Logic (Shift + Drag)
+    // --- Rubber Band Logic (Shift + Drag) ---
+
+    const onMouseMove = (e) => {
+        if (!startPointRef.current) return;
+        
+        const start = startPointRef.current;
+        const current = e.point;
+
+        // Calculate box dimensions
+        const minX = Math.min(start.x, current.x);
+        const maxX = Math.max(start.x, current.x);
+        const minY = Math.min(start.y, current.y);
+        const maxY = Math.max(start.y, current.y);
+
+        setSelectionBox({
+            left: minX,
+            top: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        });
+    };
+
+    const onMouseUp = (e) => {
+        if (!startPointRef.current) return;
+
+        const start = startPointRef.current;
+        const end = e.point;
+
+        // If it was a tiny movement, treat as click (handled by click listener)
+        if (Math.abs(start.x - end.x) < 5 && Math.abs(start.y - end.y) < 5) {
+            startPointRef.current = null;
+            setSelectionBox(null);
+            map.current.dragPan.enable();
+            map.current.off('mousemove', onMouseMove);
+            map.current.off('mouseup', onMouseUp);
+            return;
+        }
+
+        // Identify features inside the box
+        const bbox = [start, end];
+        const features = map.current.queryRenderedFeatures(bbox, { layers: ['waypoints-layer'] });
+        const ids = features.map(f => f.properties.id);
+        
+        if (ids.length > 0) {
+            // If holding shift, ADD to selection, else REPLACE
+            setSelectedIds(ids); 
+        }
+
+        // Cleanup
+        startPointRef.current = null;
+        setSelectionBox(null);
+        map.current.dragPan.enable();
+        
+        // Flag to prevent the 'click' event from firing immediately after
+        e.originalEvent._isDrag = true; 
+        setTimeout(() => { if(e.originalEvent) delete e.originalEvent._isDrag }, 100);
+
+        map.current.off('mousemove', onMouseMove);
+        map.current.off('mouseup', onMouseUp);
+    };
+
     map.current.on('mousedown', (e) => {
       if (e.originalEvent.shiftKey) {
         e.preventDefault();
         map.current.dragPan.disable();
-        setStartBox(e.point);
-      }
-    });
-
-    map.current.on('mouseup', (e) => {
-      if (startBox) {
-        const endBox = e.point;
-        const features = map.current.queryRenderedFeatures(
-          [startBox, endBox], 
-          { layers: ['waypoints-layer'] }
-        );
-        const ids = features.map(f => f.properties.id);
-        setSelectedIds(ids);
-        setStartBox(null);
-        map.current.dragPan.enable();
+        startPointRef.current = e.point;
+        
+        map.current.on('mousemove', onMouseMove);
+        map.current.on('mouseup', onMouseUp);
       }
     });
 
@@ -115,32 +227,55 @@ export default function MapContainer({ onPolygonDrawn }) {
   useEffect(() => {
       if(!map.current) return;
       map.current.on('load', () => {
-          map.current.addSource('route', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-          map.current.addLayer({
-            id: 'route-line',
-            type: 'line',
-            source: 'route',
-            paint: { 'line-color': '#3b82f6', 'line-width': 2 }
-          });
+          if (!map.current.getSource('route')) {
+              map.current.addSource('route', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+              map.current.addLayer({
+                id: 'route-line',
+                type: 'line',
+                source: 'route',
+                paint: { 'line-color': '#3b82f6', 'line-width': 2 }
+              });
+          }
 
-          map.current.addSource('waypoints', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-          map.current.addLayer({
-            id: 'waypoints-layer',
-            type: 'circle',
-            source: 'waypoints',
-            paint: {
-              'circle-radius': 6,
-              'circle-color': ['case', ['boolean', ['get', 'selected'], false], '#facc15', '#3b82f6'],
-              'circle-stroke-width': 2,
-              'circle-stroke-color': '#ffffff'
-            }
-          });
+          if (!map.current.getSource('waypoints')) {
+              map.current.addSource('waypoints', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+              map.current.addLayer({
+                id: 'waypoints-layer',
+                type: 'circle',
+                source: 'waypoints',
+                paint: {
+                  'circle-radius': 6,
+                  'circle-color': ['case', ['boolean', ['get', 'selected'], false], '#facc15', '#3b82f6'],
+                  'circle-stroke-width': 2,
+                  'circle-stroke-color': '#ffffff'
+                }
+              });
+          }
       });
   }, []);
 
-  // Expose drawing controls to parent via refs or store if needed
-  // For now, simple button handlers in Sidebar will call draw.current.changeMode
+  // Expose drawing controls
   window.mapboxDraw = draw.current; 
 
-  return <div ref={mapContainer} className="w-full h-full relative" />;
+  return (
+    <div className="relative w-full h-full">
+        <div ref={mapContainer} className="w-full h-full" />
+        {/* Visual Selection Box */}
+        {selectionBox && (
+            <div
+                style={{
+                    position: 'absolute',
+                    left: selectionBox.left,
+                    top: selectionBox.top,
+                    width: selectionBox.width,
+                    height: selectionBox.height,
+                    border: '2px solid #3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    pointerEvents: 'none', // Allow mouse events to pass through to map
+                    zIndex: 20
+                }}
+            />
+        )}
+    </div>
+  );
 }
