@@ -73,9 +73,9 @@ export default function MapContainer({ onPolygonDrawn }) {
   const map = useRef(null);
   const draw = useRef(null);
   const { waypoints, selectedIds, selectWaypoint, setSelectedIds } = useMissionStore();
-  
+
   const [selectionBox, setSelectionBox] = useState(null);
-  const startPointRef = useRef(null); 
+  const startPointRef = useRef(null);
 
   useEffect(() => {
     if (map.current) return;
@@ -83,16 +83,16 @@ export default function MapContainer({ onPolygonDrawn }) {
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-streets-v12',
-      center: [-98, 39], 
+      center: [-98, 39],
       zoom: 4,
-      boxZoom: false 
+      boxZoom: false
     });
 
     const geocoder = new MapboxGeocoder({
-        accessToken: mapboxgl.accessToken,
-        mapboxgl: mapboxgl,
-        marker: false,
-        collapsed: true
+      accessToken: mapboxgl.accessToken,
+      mapboxgl: mapboxgl,
+      marker: false,
+      collapsed: true
     });
     map.current.addControl(geocoder, 'top-right');
 
@@ -114,59 +114,59 @@ export default function MapContainer({ onPolygonDrawn }) {
     map.current.on('draw.create', (e) => onPolygonDrawn(e.features[0]));
     map.current.on('draw.update', (e) => onPolygonDrawn(e.features[0]));
     map.current.on('draw.delete', () => onPolygonDrawn(null));
-    
+
     map.current.on('click', (e) => {
       if (e.originalEvent._isDrag) return;
       const features = map.current.queryRenderedFeatures(e.point, { layers: ['waypoints-symbol'] });
-      
+
       if (features.length) {
         const id = features[0].properties.id;
         selectWaypoint(id, e.originalEvent.shiftKey);
       } else {
-        const drawFeatures = map.current.queryRenderedFeatures(e.point, { 
-            layers: ['gl-draw-polygon-fill-static.cold', 'gl-draw-polygon-fill.hot'] 
+        const drawFeatures = map.current.queryRenderedFeatures(e.point, {
+          layers: ['gl-draw-polygon-fill-static.cold', 'gl-draw-polygon-fill.hot']
         });
         if (drawFeatures.length === 0) setSelectedIds([]);
       }
     });
 
     const onMouseMove = (e) => {
-        if (!startPointRef.current) return;
-        const start = startPointRef.current;
-        const current = e.point;
-        const minX = Math.min(start.x, current.x);
-        const maxX = Math.max(start.x, current.x);
-        const minY = Math.min(start.y, current.y);
-        const maxY = Math.max(start.y, current.y);
-        setSelectionBox({ left: minX, top: minY, width: maxX - minX, height: maxY - minY });
+      if (!startPointRef.current) return;
+      const start = startPointRef.current;
+      const current = e.point;
+      const minX = Math.min(start.x, current.x);
+      const maxX = Math.max(start.x, current.x);
+      const minY = Math.min(start.y, current.y);
+      const maxY = Math.max(start.y, current.y);
+      setSelectionBox({ left: minX, top: minY, width: maxX - minX, height: maxY - minY });
     };
 
     const onMouseUp = (e) => {
-        if (!startPointRef.current) return;
-        const start = startPointRef.current;
-        const end = e.point;
+      if (!startPointRef.current) return;
+      const start = startPointRef.current;
+      const end = e.point;
 
-        if (Math.abs(start.x - end.x) < 5 && Math.abs(start.y - end.y) < 5) {
-            startPointRef.current = null;
-            setSelectionBox(null);
-            map.current.dragPan.enable();
-            map.current.off('mousemove', onMouseMove);
-            map.current.off('mouseup', onMouseUp);
-            return;
-        }
-
-        const bbox = [start, end];
-        const features = map.current.queryRenderedFeatures(bbox, { layers: ['waypoints-symbol'] });
-        const ids = features.map(f => f.properties.id);
-        if (ids.length > 0) setSelectedIds(ids); 
-
+      if (Math.abs(start.x - end.x) < 5 && Math.abs(start.y - end.y) < 5) {
         startPointRef.current = null;
         setSelectionBox(null);
         map.current.dragPan.enable();
-        e.originalEvent._isDrag = true; 
-        setTimeout(() => { if(e.originalEvent) delete e.originalEvent._isDrag }, 100);
         map.current.off('mousemove', onMouseMove);
         map.current.off('mouseup', onMouseUp);
+        return;
+      }
+
+      const bbox = [start, end];
+      const features = map.current.queryRenderedFeatures(bbox, { layers: ['waypoints-symbol'] });
+      const ids = features.map(f => f.properties.id);
+      if (ids.length > 0) setSelectedIds(ids);
+
+      startPointRef.current = null;
+      setSelectionBox(null);
+      map.current.dragPan.enable();
+      e.originalEvent._isDrag = true;
+      setTimeout(() => { if (e.originalEvent) delete e.originalEvent._isDrag }, 100);
+      map.current.off('mousemove', onMouseMove);
+      map.current.off('mouseup', onMouseUp);
     };
 
     map.current.on('mousedown', (e) => {
@@ -184,16 +184,16 @@ export default function MapContainer({ onPolygonDrawn }) {
   // --- Render Waypoints ---
   useEffect(() => {
     if (!map.current || !map.current.getSource('waypoints')) return;
-    
+
     const geojson = {
       type: 'FeatureCollection',
       features: waypoints.map((wp, i) => ({
         type: 'Feature',
-        properties: { 
-            id: wp.id, 
-            selected: selectedIds.includes(wp.id),
-            heading: wp.heading || 0,
-            index: i + 1 
+        properties: {
+          id: wp.id,
+          selected: selectedIds.includes(wp.id),
+          heading: wp.heading || 0,
+          index: i + 1
         },
         geometry: { type: 'Point', coordinates: [wp.lng, wp.lat] }
       }))
@@ -215,77 +215,77 @@ export default function MapContainer({ onPolygonDrawn }) {
   }, [waypoints, selectedIds]);
 
   useEffect(() => {
-      if(!map.current) return;
-      map.current.on('load', () => {
-          const img = new Image();
-          img.src = TEARDROP_IMAGE;
-          img.onload = () => {
-             if (!map.current.hasImage('teardrop')) {
-                 map.current.addImage('teardrop', img);
-             }
-          };
+    if (!map.current) return;
+    map.current.on('load', () => {
+      const img = new Image();
+      img.src = TEARDROP_IMAGE;
+      img.onload = () => {
+        if (!map.current.hasImage('teardrop')) {
+          map.current.addImage('teardrop', img);
+        }
+      };
 
-          if (!map.current.getSource('route')) {
-              map.current.addSource('route', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-              map.current.addLayer({
-                id: 'route-line',
-                type: 'line',
-                source: 'route',
-                paint: { 'line-color': '#60a5fa', 'line-width': 2, 'line-opacity': 0.8 }
-              });
-          }
+      if (!map.current.getSource('route')) {
+        map.current.addSource('route', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+        map.current.addLayer({
+          id: 'route-line',
+          type: 'line',
+          source: 'route',
+          paint: { 'line-color': '#60a5fa', 'line-width': 2, 'line-opacity': 0.8 }
+        });
+      }
 
-          if (!map.current.getSource('waypoints')) {
-              map.current.addSource('waypoints', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-              map.current.addLayer({
-                id: 'waypoints-symbol',
-                type: 'symbol',
-                source: 'waypoints',
-                layout: {
-                    'icon-image': 'teardrop',
-                    'icon-size': 0.8,
-                    'icon-allow-overlap': true,
-                    'icon-ignore-placement': true, // CRITICAL: Forces icon to show despite overlap
-                    'icon-rotate': ['get', 'heading'],
-                    'icon-rotation-alignment': 'map',
-                    'icon-anchor': 'bottom',
-                    'text-field': ['to-string', ['get', 'index']],
-                    'text-size': 11,
-                    'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-                    'text-offset': [0, -1.5],
-                    'text-anchor': 'center',
-                    'text-allow-overlap': true,
-                    'text-ignore-placement': true // CRITICAL: Forces text to show despite overlap
-                },
-                paint: {
-                    'text-color': '#3b82f6',
-                    'icon-opacity': ['case', ['boolean', ['get', 'selected'], false], 1, 0.85],
-                    'icon-halo-color': ['case', ['boolean', ['get', 'selected'], false], '#facc15', 'transparent'],
-                    'icon-halo-width': 3
-                }
-              });
+      if (!map.current.getSource('waypoints')) {
+        map.current.addSource('waypoints', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+        map.current.addLayer({
+          id: 'waypoints-symbol',
+          type: 'symbol',
+          source: 'waypoints',
+          layout: {
+            'icon-image': 'teardrop',
+            'icon-size': 0.8,
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true, // CRITICAL: Forces icon to show despite overlap
+            'icon-rotate': ['get', 'heading'],
+            'icon-rotation-alignment': 'map',
+            'icon-anchor': 'center',
+            'text-field': ['to-string', ['get', 'index']],
+            'text-size': 11,
+            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+            'text-offset': [0, 0],
+            'text-anchor': 'center',
+            'text-allow-overlap': true,
+            'text-ignore-placement': true // CRITICAL: Forces text to show despite overlap
+          },
+          paint: {
+            'text-color': '#3b82f6',
+            'icon-opacity': ['case', ['boolean', ['get', 'selected'], false], 1, 0.85],
+            'icon-halo-color': ['case', ['boolean', ['get', 'selected'], false], '#facc15', 'transparent'],
+            'icon-halo-width': 3
           }
-      });
+        });
+      }
+    });
   }, []);
 
   return (
     <div className="relative w-full h-full">
-        <div ref={mapContainer} className="w-full h-full" />
-        {selectionBox && (
-            <div
-                style={{
-                    position: 'absolute',
-                    left: selectionBox.left,
-                    top: selectionBox.top,
-                    width: selectionBox.width,
-                    height: selectionBox.height,
-                    border: '2px solid #3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                    pointerEvents: 'none',
-                    zIndex: 20
-                }}
-            />
-        )}
+      <div ref={mapContainer} className="w-full h-full" />
+      {selectionBox && (
+        <div
+          style={{
+            position: 'absolute',
+            left: selectionBox.left,
+            top: selectionBox.top,
+            width: selectionBox.width,
+            height: selectionBox.height,
+            border: '2px solid #3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+            pointerEvents: 'none',
+            zIndex: 20
+          }}
+        />
+      )}
     </div>
   );
 }
