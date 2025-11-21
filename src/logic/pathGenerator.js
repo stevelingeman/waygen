@@ -11,23 +11,19 @@ export function generatePhotogrammetryPath(polygonFeature, altitude, overlap, an
   // 2. Convert Spacing to DEGREES (Lat/Lng approximation)
   const lineSpacingDegrees = lineSpacingMeters / 111111;
 
-  // 3. CRITICAL: Define a fixed pivot point for rotation
-  // We must rotate the polygon AND the results around the exact same point.
+  // 3. Define a fixed pivot point for rotation
   const pivot = turf.centroid(polygonFeature);
 
-  // Rotate Polygon to flatten the requested angle around the pivot
+  // Rotate Polygon
   const rotation = -angle; 
   const rotatedPoly = turf.transformRotate(polygonFeature, rotation, { pivot: pivot });
   const bbox = turf.bbox(rotatedPoly); 
 
   // Generate Grid Lines
   const flightLines = [];
-  
-  // Start slightly inside the box
   let currentY = bbox[1] + (lineSpacingDegrees / 2);
 
   while (currentY < bbox[3]) {
-    // Draw a line across the entire world width of the bbox
     const line = turf.lineString([
       [bbox[0] - 0.05, currentY], 
       [bbox[2] + 0.05, currentY]
@@ -36,10 +32,8 @@ export function generatePhotogrammetryPath(polygonFeature, altitude, overlap, an
     // Clip line to polygon
     const intersected = turf.lineSplit(line, rotatedPoly);
     
-    // Helper to get midpoint of a line segment
     const getLineCenter = (lineFeat) => {
       const coords = lineFeat.geometry.coordinates;
-      // Handle cases where line might be a MultiLineString (rare but possible)
       if (Array.isArray(coords[0][0])) {
          return turf.midpoint(coords[0][0], coords[0][coords[0].length - 1]);
       }
@@ -47,7 +41,6 @@ export function generatePhotogrammetryPath(polygonFeature, altitude, overlap, an
     };
 
     if (intersected.features.length === 0) {
-       // Check if the line itself is inside (fully contained)
        const center = getLineCenter(line);
        if (turf.booleanPointInPolygon(center, rotatedPoly)) {
            flightLines.push(line.geometry.coordinates);
@@ -64,10 +57,9 @@ export function generatePhotogrammetryPath(polygonFeature, altitude, overlap, an
     currentY += lineSpacingDegrees;
   }
 
-  // Connect Lines (Snake/ZigZag)
+  // Connect Lines
   const waypoints = [];
   flightLines.forEach((lineCoords, index) => {
-    // Flip every second line
     const coords = (index % 2 === 1) ? lineCoords.reverse() : lineCoords;
     
     coords.forEach(c => {
@@ -83,7 +75,7 @@ export function generatePhotogrammetryPath(polygonFeature, altitude, overlap, an
     });
   });
 
-  // Rotate back to original orientation using the SAME pivot
+  // Rotate back
   if (waypoints.length === 0) return [];
   
   const flatPoints = turf.points(waypoints.map(p => [p.lng, p.lat]));
@@ -94,14 +86,15 @@ export function generatePhotogrammetryPath(polygonFeature, altitude, overlap, an
     waypoints[i].lat = pt.geometry.coordinates[1];
   });
 
-  // Calculate Headings
+  // Calculate Headings (Point to next waypoint)
   for (let i = 0; i < waypoints.length; i++) {
     if (i < waypoints.length - 1) {
       const start = turf.point([waypoints[i].lng, waypoints[i].lat]);
       const end = turf.point([waypoints[i+1].lng, waypoints[i+1].lat]);
       waypoints[i].heading = turf.bearing(start, end);
     } else {
-      if(i > 0) waypoints[i].heading = waypoints[i-1].heading; 
+      // Last point inherits the heading of the segment leading up to it
+      if (i > 0) waypoints[i].heading = waypoints[i-1].heading; 
     }
   }
 
