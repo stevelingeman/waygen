@@ -5,8 +5,15 @@ import commonjs from 'vite-plugin-commonjs'
 export default defineConfig({
   plugins: [
     react(),
-    commonjs() // This fixes the "require is not defined" error
+    commonjs()
   ],
+  // 1. This "define" block creates fake variables for the browser
+  define: {
+    // This mocks the 'require' object so code checking 'require.main' doesn't crash
+    'require': { main: {} },
+    // This mocks 'process.argv' which is also visible in your error screenshot
+    'process': { env: {}, argv: [] }
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,
