@@ -2,22 +2,10 @@ import React, { useState } from 'react';
 import { useMissionStore } from '../../store/useMissionStore';
 import { generatePhotogrammetryPath } from '../../logic/pathGenerator';
 import { downloadKMZ } from '../../utils/djiExporter';
-import { Trash2, Undo, Redo, Download, Play } from 'lucide-react';
-import { parseImport } from '../../utils/kmlImporter';
+import { parseImport } from '../../utils/kmlImporter'; // Import the parser
+import { Trash2, Undo, Redo, Download, Play, Upload } from 'lucide-react'; // Added Upload icon
 
 export default function SidebarMain({ currentPolygon }) {
-  
-  const handleFileUpload = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    const geojson = await parseImport(file);
-    // Convert GeoJSON points to your waypoint format and setWaypoints(newPoints)
-  } catch (err) {
-    alert("Failed to parse file");
-  }};
- 
-  
   const { 
     waypoints, selectedIds, 
     setWaypoints, updateSelectedWaypoints, deleteSelectedWaypoints,
@@ -41,6 +29,42 @@ export default function SidebarMain({ currentPolygon }) {
       settings.gimbalPitch
     );
     setWaypoints(path);
+  };
+
+  // File Import Handler
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const geojson = await parseImport(file);
+      
+      // Convert GeoJSON points to our internal Waypoint format
+      // Note: This assumes the KML contains points. If it contains lines, logic differs.
+      const newPoints = [];
+      geojson.features.forEach(f => {
+        if (f.geometry.type === "Point") {
+            newPoints.push({
+                id: crypto.randomUUID(),
+                lng: f.geometry.coordinates[0],
+                lat: f.geometry.coordinates[1],
+                altitude: settings.altitude, // Default to current settings
+                speed: 3.5,
+                gimbalPitch: settings.gimbalPitch,
+                heading: 0
+            });
+        }
+      });
+
+      if (newPoints.length > 0) {
+          setWaypoints(newPoints);
+          alert(`Imported ${newPoints.length} waypoints!`);
+      } else {
+          alert("No waypoints found in file.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to parse file. Ensure it is a valid KML/KMZ.");
+    }
   };
 
   // Bulk Edit Mode
@@ -76,7 +100,6 @@ export default function SidebarMain({ currentPolygon }) {
 
   // Default Settings Mode
   return (
-    <input type="file" onChange={handleFileUpload} className="text-xs mb-4" />
     <div className="p-4 bg-white h-full border-l w-80 flex flex-col overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
          <h1 className="font-bold text-xl">WaypointMap</h1>
@@ -84,6 +107,15 @@ export default function SidebarMain({ currentPolygon }) {
             <button onClick={undo} className="p-1 hover:bg-gray-100 rounded"><Undo size={18}/></button>
             <button onClick={redo} className="p-1 hover:bg-gray-100 rounded"><Redo size={18}/></button>
          </div>
+      </div>
+
+      {/* Import Section */}
+      <div className="mb-6 p-3 bg-blue-50 rounded border border-blue-100">
+        <label className="flex items-center gap-2 text-sm text-blue-800 font-bold mb-2 cursor-pointer">
+            <Upload size={14} /> Import KML/KMZ
+            <input type="file" onChange={handleFileUpload} className="hidden" accept=".kml,.kmz" />
+        </label>
+        <p className="text-xs text-blue-600">Load existing missions to edit.</p>
       </div>
 
       <div className="space-y-4 mb-8">
