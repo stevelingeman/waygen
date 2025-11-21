@@ -5,13 +5,11 @@ import commonjs from 'vite-plugin-commonjs'
 export default defineConfig({
   plugins: [
     react(),
-    commonjs()
+    commonjs() 
   ],
-  // 1. This "define" block creates fake variables for the browser
   define: {
-    // This mocks the 'require' object so code checking 'require.main' doesn't crash
-    'require': { main: {} },
-    // This mocks 'process.argv' which is also visible in your error screenshot
+    // REMOVED 'require' from here.
+    // Keep 'process' as it is safe and often needed.
     'process': { env: {}, argv: [] }
   },
   build: {
