@@ -11,9 +11,13 @@ export function generatePhotogrammetryPath(polygonFeature, altitude, overlap, an
   // 2. Convert Spacing to DEGREES (Lat/Lng approximation)
   const lineSpacingDegrees = lineSpacingMeters / 111111;
 
-  // Rotate Polygon to flatten the requested angle
+  // 3. CRITICAL: Define a fixed pivot point for rotation
+  // We must rotate the polygon AND the results around the exact same point.
+  const pivot = turf.centroid(polygonFeature);
+
+  // Rotate Polygon to flatten the requested angle around the pivot
   const rotation = -angle; 
-  const rotatedPoly = turf.transformRotate(polygonFeature, rotation);
+  const rotatedPoly = turf.transformRotate(polygonFeature, rotation, { pivot: pivot });
   const bbox = turf.bbox(rotatedPoly); 
 
   // Generate Grid Lines
@@ -35,6 +39,10 @@ export function generatePhotogrammetryPath(polygonFeature, altitude, overlap, an
     // Helper to get midpoint of a line segment
     const getLineCenter = (lineFeat) => {
       const coords = lineFeat.geometry.coordinates;
+      // Handle cases where line might be a MultiLineString (rare but possible)
+      if (Array.isArray(coords[0][0])) {
+         return turf.midpoint(coords[0][0], coords[0][coords[0].length - 1]);
+      }
       return turf.midpoint(coords[0], coords[coords.length - 1]);
     };
 
@@ -46,7 +54,7 @@ export function generatePhotogrammetryPath(polygonFeature, altitude, overlap, an
        }
     } else {
         intersected.features.forEach(seg => {
-          const center = getLineCenter(seg); // <--- Fixed this line
+          const center = getLineCenter(seg);
           if (turf.booleanPointInPolygon(center, rotatedPoly)) {
             flightLines.push(seg.geometry.coordinates);
           }
@@ -75,11 +83,11 @@ export function generatePhotogrammetryPath(polygonFeature, altitude, overlap, an
     });
   });
 
-  // Rotate back to original orientation
+  // Rotate back to original orientation using the SAME pivot
   if (waypoints.length === 0) return [];
   
   const flatPoints = turf.points(waypoints.map(p => [p.lng, p.lat]));
-  const restoredPoints = turf.transformRotate(flatPoints, angle);
+  const restoredPoints = turf.transformRotate(flatPoints, angle, { pivot: pivot });
   
   restoredPoints.features.forEach((pt, i) => {
     waypoints[i].lng = pt.geometry.coordinates[0];
