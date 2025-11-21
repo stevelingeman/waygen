@@ -5,6 +5,21 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WaypointMap Mission Editor</title>
+    
+    <!-- ADD THIS SCRIPT BLOCK -->
+    <script>
+      // Runtime Polyfill for legacy libraries
+      // This prevents "Uncaught ReferenceError: require is not defined"
+      window.require = function() { return {}; };
+      window.require.main = {}; 
+      
+      // Ensure process exists if the build define missed any spots
+      if (!window.process) {
+        window.process = { env: {}, argv: [] };
+      }
+    </script>
+    <!-- END SCRIPT BLOCK -->
+
   </head>
   <body>
     <div id="root"></div>
