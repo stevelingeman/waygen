@@ -103,10 +103,11 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
   const flightLines = [];
   let currentY = bbox[1] + (lineSpacingDegrees / 2);
 
-  while (currentY < bbox[3]) {
+  // Ensure we cover the entire bounding box, including the top edge
+  while (currentY <= bbox[3] + (lineSpacingDegrees / 10)) {
     const line = turf.lineString([
-      [bbox[0] - 0.05, currentY],
-      [bbox[2] + 0.05, currentY]
+      [bbox[0] - 0.1, currentY],
+      [bbox[2] + 0.1, currentY]
     ]);
 
     // Clip line to polygon
@@ -128,6 +129,7 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
     } else {
       intersected.features.forEach(seg => {
         const center = getLineCenter(seg);
+        // Check if center is inside OR if it's a valid segment on the boundary
         if (turf.booleanPointInPolygon(center, rotatedPoly)) {
           flightLines.push(seg.geometry.coordinates);
         }

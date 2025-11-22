@@ -11,21 +11,21 @@ import { useMissionStore } from '../../store/useMissionStore';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
-// Custom Teardrop Icon (Blue)
+// Custom Teardrop Icon (Blue - Solid)
 const TEARDROP_IMAGE = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
 <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
   <path d="M20 0 L35 20 A 15 15 0 0 1 5 20 Z" fill="#3b82f6" stroke="white" stroke-width="2"/>
-  <circle cx="20" cy="20" r="8" fill="white"/>
 </svg>
 `);
 
-// Custom Teardrop Icon (Red for Selected)
+// Custom Teardrop Icon (Red - Solid for Selected)
 const TEARDROP_SELECTED_IMAGE = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
 <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
   <path d="M20 0 L35 20 A 15 15 0 0 1 5 20 Z" fill="#ef4444" stroke="white" stroke-width="2"/>
-  <circle cx="20" cy="20" r="8" fill="white"/>
 </svg>
 `);
+
+
 
 const simpleStyles = [
   {
@@ -393,13 +393,9 @@ export default function MapContainer({ onPolygonDrawn }) {
           'text-rotation-alignment': 'viewport'
         },
         paint: {
-          'text-color': '#3b82f6', // Blue text to match icon? Or black?
-          // The circle is white. Blue text would look good.
-          // Previous was white text with halo.
-          // If background is white circle, blue text is good.
-          'text-color': '#3b82f6',
-          'text-halo-color': '#ffffff',
-          'text-halo-width': 0
+          'text-color': '#ffffff',
+          'text-halo-color': '#000000',
+          'text-halo-width': 0.5
         }
       });
 
