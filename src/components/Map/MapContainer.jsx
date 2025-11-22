@@ -8,6 +8,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import { useMissionStore } from '../../store/useMissionStore';
+import DragRectangleMode from '../../logic/DragRectangleMode';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -24,8 +25,6 @@ const TEARDROP_SELECTED_IMAGE = 'data:image/svg+xml;charset=utf-8,' + encodeURIC
   <path d="M20 0 L35 20 A 15 15 0 0 1 5 20 Z" fill="#ef4444" stroke="white" stroke-width="2"/>
 </svg>
 `);
-
-
 
 const simpleStyles = [
   {
@@ -191,6 +190,7 @@ export default function MapContainer({ onPolygonDrawn }) {
         ...MapboxDraw.modes,
         draw_circle: CircleMode,
         drag_circle: DragCircleMode,
+        draw_rectangle: DragRectangleMode,
         direct_select: DirectMode,
         simple_select: SimpleSelectMode
       }
@@ -207,7 +207,13 @@ export default function MapContainer({ onPolygonDrawn }) {
         feature.properties.isCircle = true;
       }
 
-      // 2. Check for "Accidental Large Circle" (Click vs Drag)
+      // 2. Handle Rectangle Creation (Optional: Tag it)
+      if (draw.current.getMode() === 'draw_rectangle') {
+        // It's already a polygon, so path generator handles it fine.
+        // We could tag it if needed, but 'Polygon' is sufficient.
+      }
+
+      // 3. Check for "Accidental Large Circle" (Click vs Drag)
       // If the user just clicks, it might create a huge default circle. We resize it to 50m.
       const center = turf.centroid(feature);
       const currentRadius = turf.distance(
@@ -523,19 +529,27 @@ export default function MapContainer({ onPolygonDrawn }) {
       <div className="absolute top-4 left-4 flex flex-col gap-2">
         <button
           onClick={() => draw.current.changeMode('drag_circle')}
-          className="bg-white p-2 rounded shadow hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2"
+          className="bg-white p-2 rounded shadow hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2 justify-start w-24"
           title="Draw Circle"
         >
-          <div className="w-3 h-3 rounded-full border-2 border-blue-600"></div>
-          Circle
+          <div className="w-3 h-3 rounded-full border-2 border-blue-600 shrink-0"></div>
+          <span>Circle</span>
+        </button>
+        <button
+          onClick={() => draw.current.changeMode('draw_rectangle')}
+          className="bg-white p-2 rounded shadow hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2 justify-start w-24"
+          title="Draw Square"
+        >
+          <div className="w-3 h-3 border-2 border-blue-600 shrink-0"></div>
+          <span>Square</span>
         </button>
         <button
           onClick={() => draw.current.changeMode('draw_polygon')}
-          className="bg-white p-2 rounded shadow hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2"
+          className="bg-white p-2 rounded shadow hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2 justify-start w-24"
           title="Draw Polygon"
         >
-          <div className="w-3 h-3 border-2 border-blue-600"></div>
-          Polygon
+          <div className="w-3 h-3 border-2 border-blue-600 shrink-0" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
+          <span>Polygon</span>
         </button>
       </div>
     </div>
