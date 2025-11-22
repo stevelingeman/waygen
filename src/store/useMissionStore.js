@@ -23,7 +23,8 @@ export const useMissionStore = create((set, get) => ({
     photoInterval: 2, // seconds
     reversePath: false,
     spacing: 10, // meters (for orbit mode)
-    pathType: 'grid' // grid, orbit
+    pathType: 'grid', // grid, orbit
+    orbitRadius: 50 // meters (default radius for fixed circle)
   },
 
   setWaypoints: (newWaypoints) => {
@@ -108,5 +109,11 @@ export const useMissionStore = create((set, get) => ({
     past: [],
     future: [],
     resetTrigger: state.resetTrigger + 1
+  })),
+
+  // Create Circle Logic
+  createCircleTrigger: 0,
+  triggerCreateCircle: () => set((state) => ({
+    createCircleTrigger: state.createCircleTrigger + 1
   }))
 }));

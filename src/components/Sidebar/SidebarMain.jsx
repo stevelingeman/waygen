@@ -274,16 +274,38 @@ export default function SidebarMain({ currentPolygon }) {
               </div>
             </>
           ) : (
-            <div>
-              <label className="text-xs font-bold text-gray-500 mb-1 block">Spacing (m)</label>
-              <input
-                type="number"
-                min="1"
-                value={settings.spacing}
-                onChange={e => updateSettings({ spacing: Number(e.target.value) })}
-                className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <p className="text-[10px] text-gray-400 mt-1">Distance between waypoints along the perimeter.</p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-gray-500 mb-1 block">Spacing (m)</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={settings.spacing}
+                  onChange={e => updateSettings({ spacing: Number(e.target.value) })}
+                  className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">Distance between waypoints along the perimeter.</p>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-500 mb-1 block">Circle Radius (m)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="5"
+                    value={settings.orbitRadius}
+                    onChange={e => updateSettings({ orbitRadius: Number(e.target.value) })}
+                    className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  <button
+                    onClick={useMissionStore.getState().triggerCreateCircle}
+                    className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700 whitespace-nowrap"
+                  >
+                    Create
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">Create a circle at the map center.</p>
+              </div>
             </div>
           )}
 

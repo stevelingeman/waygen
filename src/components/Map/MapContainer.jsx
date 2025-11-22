@@ -1,85 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
-import { CircleMode, DragCircleMode, DirectMode, SimpleSelectMode } from 'mapbox-gl-draw-circle';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
-import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
-import { useMissionStore } from '../../store/useMissionStore';
+import * as turf from '@turf/turf';
 
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
-
-// Custom Teardrop Icon (Blue)
-const TEARDROP_IMAGE = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
-<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-  <path d="M20 0 L35 20 A 15 15 0 0 1 5 20 Z" fill="#3b82f6" stroke="white" stroke-width="2"/>
-  <circle cx="20" cy="20" r="8" fill="white"/>
-</svg>
-`);
-
-// Custom Teardrop Icon (Red for Selected)
-const TEARDROP_SELECTED_IMAGE = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
-<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-  <path d="M20 0 L35 20 A 15 15 0 0 1 5 20 Z" fill="#ef4444" stroke="white" stroke-width="2"/>
-  <circle cx="20" cy="20" r="8" fill="white"/>
-</svg>
-`);
-
-const simpleStyles = [
-  // ... (Keep your existing simpleStyles array here to prevent crashes) ...
-  {
-    "id": "gl-draw-line",
-    "type": "line",
-    "filter": ["all", ["==", "$type", "LineString"], ["!=", "mode", "static"]],
-    "layout": { "line-cap": "round", "line-join": "round" },
-    "paint": { "line-color": "#3b82f6", "line-width": 2 }
-  },
-  {
-    "id": "gl-draw-polygon-fill",
-    "type": "fill",
-    "filter": ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
-    "paint": { "fill-color": "#3b82f6", "fill-outline-color": "#3b82f6", "fill-opacity": 0.2 }
-  },
-  {
-    "id": "gl-draw-polygon-stroke-active",
-    "type": "line",
-    "filter": ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
-    "layout": { "line-cap": "round", "line-join": "round" },
-    "paint": { "line-color": "#3b82f6", "line-width": 2 }
-  },
-  {
-    "id": "gl-draw-point-point-stroke-active",
-    "type": "circle",
-    "filter": ["all", ["==", "$type", "Point"], ["!=", "mode", "static"]],
-    "paint": { "circle-radius": 6, "circle-color": "#fff" }
-  },
-  {
-    "id": "gl-draw-point",
-    "type": "circle",
-    "filter": ["all", ["==", "$type", "Point"], ["!=", "mode", "static"]],
-    "paint": { "circle-radius": 4, "circle-color": "#3b82f6" }
-  },
-  {
-    "id": "gl-draw-polygon-fill-static",
-    "type": "fill",
-    "filter": ["all", ["==", "$type", "Polygon"], ["==", "mode", "static"]],
-    "paint": { "fill-color": "#000", "fill-outline-color": "#000", "fill-opacity": 0.1 }
-  },
-  {
-    "id": "gl-draw-polygon-stroke-static",
-    "type": "line",
-    "filter": ["all", ["==", "$type", "Polygon"], ["==", "mode", "static"]],
-    "layout": { "line-cap": "round", "line-join": "round" },
-    "paint": { "line-color": "#000", "line-width": 2 }
-  }
-];
+// ... (imports)
 
 export default function MapContainer({ onPolygonDrawn }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const draw = useRef(null);
-  const { waypoints, selectedIds, selectWaypoint, setSelectedIds, resetTrigger } = useMissionStore();
+  const { waypoints, selectedIds, selectWaypoint, setSelectedIds, resetTrigger, createCircleTrigger, settings } = useMissionStore();
 
   // Handle Reset
   useEffect(() => {
@@ -88,6 +15,22 @@ export default function MapContainer({ onPolygonDrawn }) {
       onPolygonDrawn(null);
     }
   }, [resetTrigger, onPolygonDrawn]);
+
+  // Handle Create Circle
+  useEffect(() => {
+    if (createCircleTrigger > 0 && draw.current && map.current) {
+      const center = map.current.getCenter();
+      const radius = settings.orbitRadius || 50;
+      const options = { steps: 64, units: 'meters' };
+      const circle = turf.circle([center.lng, center.lat], radius, options);
+
+      // Ensure it has an ID for MapboxDraw
+      circle.id = crypto.randomUUID();
+
+      draw.current.add(circle);
+      onPolygonDrawn(circle);
+    }
+  }, [createCircleTrigger, onPolygonDrawn, settings.orbitRadius]);
 
   const [selectionBox, setSelectionBox] = useState(null);
   const startPointRef = useRef(null);
