@@ -243,6 +243,30 @@ export default function SidebarMain({ currentPolygon }) {
             </div>
           </div>
 
+          {/* Circle Radius - Show if Orbit Mode OR if the shape is a circle */}
+          {(settings.pathType === 'orbit' || currentPolygon?.properties?.isCircle) && (
+            <div className="mb-3">
+              <label className="text-xs font-bold text-gray-500 mb-1 block">Circle Radius (m)</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="5"
+                  value={settings.orbitRadius}
+                  onChange={e => updateSettings({ orbitRadius: Number(e.target.value) })}
+                  className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <button
+                  onClick={useMissionStore.getState().triggerCreateCircle}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700 whitespace-nowrap"
+                  title="Create a new circle at map center"
+                >
+                  Create
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">Edit radius of selected circle.</p>
+            </div>
+          )}
+
           {settings.pathType === 'grid' ? (
             <>
               <div>
@@ -285,26 +309,6 @@ export default function SidebarMain({ currentPolygon }) {
                   className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                 />
                 <p className="text-[10px] text-gray-400 mt-1">Distance between waypoints along the perimeter.</p>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-gray-500 mb-1 block">Circle Radius (m)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    min="5"
-                    value={settings.orbitRadius}
-                    onChange={e => updateSettings({ orbitRadius: Number(e.target.value) })}
-                    className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                  <button
-                    onClick={useMissionStore.getState().triggerCreateCircle}
-                    className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700 whitespace-nowrap"
-                  >
-                    Create
-                  </button>
-                </div>
-                <p className="text-[10px] text-gray-400 mt-1">Create a circle at the map center.</p>
               </div>
             </div>
           )}
