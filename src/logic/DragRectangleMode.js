@@ -22,13 +22,41 @@ DragRectangleMode.onSetup = function (opts) {
         trash: true
     });
 
+    // Disable dragPan to allow drawing
+    setTimeout(() => {
+        if (this.map && this.map.dragPan) {
+            this.map.dragPan.disable();
+        }
+    }, 0);
+
     return {
         polygon,
         currentVertexPosition: 0
     };
 };
 
+DragRectangleMode.onStop = function (state) {
+    this.updateUIClasses({ mouse: 'none' });
+    this.activateUIButton();
+    this.setActionableState({
+        trash: true
+    });
+
+    // Re-enable dragPan
+    setTimeout(() => {
+        if (this.map && this.map.dragPan) {
+            this.map.dragPan.enable();
+        }
+    }, 0);
+};
+
 DragRectangleMode.onMouseDown = function (state, e) {
+    // Prevent default map interactions
+    if (e.originalEvent) {
+        e.originalEvent.preventDefault();
+        e.originalEvent.stopPropagation();
+    }
+
     state.startPoint = [e.lngLat.lng, e.lngLat.lat];
 
     // Update the polygon with the start point

@@ -504,8 +504,6 @@ export default function MapContainer({ onPolygonDrawn }) {
     }
   }, []);
 
-  // ... (rest of the file)
-
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
@@ -526,30 +524,39 @@ export default function MapContainer({ onPolygonDrawn }) {
       )}
 
       {/* Custom Draw Controls */}
-      <div className="absolute top-4 left-4 flex flex-col gap-2">
+      <div className="absolute top-4 left-4 flex flex-col gap-2 bg-white rounded-md shadow-md p-1">
         <button
-          onClick={() => draw.current.changeMode('drag_circle')}
-          className="bg-white p-2 rounded shadow hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2 justify-start w-24"
-          title="Draw Circle"
+          onClick={() => draw.current.changeMode('simple_select')}
+          className="p-2 rounded hover:bg-gray-100 text-gray-700 flex items-center justify-center"
+          title="Select (Pointer)"
         >
-          <div className="w-3 h-3 rounded-full border-2 border-blue-600 shrink-0"></div>
-          <span>Circle</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+            <path d="M13 13l6 6" />
+          </svg>
         </button>
         <button
           onClick={() => draw.current.changeMode('draw_rectangle')}
-          className="bg-white p-2 rounded shadow hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2 justify-start w-24"
+          className="p-2 rounded hover:bg-gray-100 text-gray-700 flex items-center justify-center"
           title="Draw Square"
         >
-          <div className="w-3 h-3 border-2 border-blue-600 shrink-0"></div>
-          <span>Square</span>
+          <div className="w-4 h-4 border-2 border-current"></div>
         </button>
         <button
           onClick={() => draw.current.changeMode('draw_polygon')}
-          className="bg-white p-2 rounded shadow hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2 justify-start w-24"
+          className="p-2 rounded hover:bg-gray-100 text-gray-700 flex items-center justify-center"
           title="Draw Polygon"
         >
-          <div className="w-3 h-3 border-2 border-blue-600 shrink-0" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }}></div>
-          <span>Polygon</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2l-8.5 6 3 10 11 0 3-10-8.5-6z" />
+          </svg>
+        </button>
+        <button
+          onClick={() => draw.current.changeMode('drag_circle')}
+          className="p-2 rounded hover:bg-gray-100 text-gray-700 flex items-center justify-center"
+          title="Draw Circle"
+        >
+          <div className="w-4 h-4 rounded-full border-2 border-current"></div>
         </button>
       </div>
     </div>
