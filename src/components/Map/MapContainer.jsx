@@ -324,6 +324,28 @@ export default function MapContainer({ onPolygonDrawn }) {
     });
 
     map.current.on('load', () => {
+      // Add Mission Path Source
+      map.current.addSource('mission-path', {
+        type: 'geojson',
+        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
+      });
+
+      // Add Mission Path Layer (Line)
+      map.current.addLayer({
+        id: 'mission-path-line',
+        type: 'line',
+        source: 'mission-path',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#3b82f6',
+          'line-width': 3,
+          'line-opacity': 0.8
+        }
+      });
+
       // Add Waypoints Source
       map.current.addSource('waypoints', {
         type: 'geojson',
@@ -337,22 +359,47 @@ export default function MapContainer({ onPolygonDrawn }) {
         source: 'waypoints',
         layout: {
           'icon-image': ['case', ['get', 'selected'], 'teardrop-selected', 'teardrop'],
-          'icon-size': 0.75,
-          'icon-anchor': 'bottom',
+          'icon-size': [
+            'interpolate', ['linear'], ['zoom'],
+            10, 0.5,
+            15, 0.75,
+            20, 1
+          ],
+          'icon-anchor': 'center',
           'icon-allow-overlap': true,
           'icon-rotate': ['get', 'heading'],
           'icon-rotation-alignment': 'map',
           'text-field': ['to-string', ['get', 'index']],
           'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-          'text-size': 11,
-          'text-offset': [0, -2.5],
-          'text-anchor': 'bottom',
-          'text-allow-overlap': true
+          'text-size': [
+            'interpolate', ['linear'], ['zoom'],
+            10, 9,
+            15, 11,
+            20, 13
+          ],
+          'text-offset': [0, 0],
+          'text-anchor': 'center',
+          'text-allow-overlap': true,
+          'text-rotation-alignment': 'map', // Rotate text with icon/map so it stays upright relative to icon? No, usually text stays upright relative to viewport or map.
+          // If 'map', text rotates with the map. If 'viewport', it stays upright.
+          // If icon rotates (heading), we might want text to stay upright relative to viewport for readability?
+          // But if it's inside the icon, maybe it should rotate with the icon?
+          // User said "heading icons are pointed correct direction".
+          // Let's try 'viewport' for text so numbers are always readable, or 'map' if they want it fixed to the ground.
+          // Usually for sequence numbers inside a rotating icon, we want them to be readable (upright).
+          // But if the icon is upside down, the number will be over the "point" if we don't rotate it?
+          // Actually, if anchor is center, and text-offset is 0,0, it stays in center.
+          // Let's stick to viewport alignment for readability.
+          'text-rotation-alignment': 'viewport'
         },
         paint: {
-          'text-color': '#ffffff',
-          'text-halo-color': '#000000',
-          'text-halo-width': 1
+          'text-color': '#3b82f6', // Blue text to match icon? Or black?
+          // The circle is white. Blue text would look good.
+          // Previous was white text with halo.
+          // If background is white circle, blue text is good.
+          'text-color': '#3b82f6',
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 0
         }
       });
 
@@ -370,10 +417,11 @@ export default function MapContainer({ onPolygonDrawn }) {
 
   }, []);
 
-  // Update Waypoints Source
+  // Update Waypoints Source & Path
   useEffect(() => {
     if (!map.current || !map.current.getSource('waypoints')) return;
 
+    // Update Points
     const features = waypoints.map((wp, index) => ({
       type: 'Feature',
       properties: {
@@ -392,6 +440,18 @@ export default function MapContainer({ onPolygonDrawn }) {
       type: 'FeatureCollection',
       features
     });
+
+    // Update Path Line
+    if (map.current.getSource('mission-path')) {
+      const lineCoords = waypoints.map(wp => [wp.lng, wp.lat]);
+      map.current.getSource('mission-path').setData({
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: lineCoords
+        }
+      });
+    }
   }, [waypoints, selectedIds]);
 
   // Ensure default radius is reasonable on load
