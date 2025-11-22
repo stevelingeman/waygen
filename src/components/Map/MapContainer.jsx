@@ -10,11 +10,18 @@ import { useMissionStore } from '../../store/useMissionStore';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
-// Custom Teardrop Icon (Pointing UP/North by default for correct rotation)
+// Custom Teardrop Icon (Blue)
 const TEARDROP_IMAGE = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
 <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-  <!-- Rotated to point UP (0 degrees) so heading rotation works correctly -->
   <path d="M20 0 L35 20 A 15 15 0 0 1 5 20 Z" fill="#3b82f6" stroke="white" stroke-width="2"/>
+  <circle cx="20" cy="20" r="8" fill="white"/>
+</svg>
+`);
+
+// Custom Teardrop Icon (Red for Selected)
+const TEARDROP_SELECTED_IMAGE = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <path d="M20 0 L35 20 A 15 15 0 0 1 5 20 Z" fill="#ef4444" stroke="white" stroke-width="2"/>
   <circle cx="20" cy="20" r="8" fill="white"/>
 </svg>
 `);
@@ -217,11 +224,21 @@ export default function MapContainer({ onPolygonDrawn }) {
   useEffect(() => {
     if (!map.current) return;
     map.current.on('load', () => {
-      const img = new Image();
-      img.src = TEARDROP_IMAGE;
-      img.onload = () => {
+      // Load Blue Icon
+      const imgBlue = new Image();
+      imgBlue.src = TEARDROP_IMAGE;
+      imgBlue.onload = () => {
         if (!map.current.hasImage('teardrop')) {
-          map.current.addImage('teardrop', img);
+          map.current.addImage('teardrop', imgBlue);
+        }
+      };
+
+      // Load Red Icon
+      const imgRed = new Image();
+      imgRed.src = TEARDROP_SELECTED_IMAGE;
+      imgRed.onload = () => {
+        if (!map.current.hasImage('teardrop-selected')) {
+          map.current.addImage('teardrop-selected', imgRed);
         }
       };
 
@@ -242,27 +259,28 @@ export default function MapContainer({ onPolygonDrawn }) {
           type: 'symbol',
           source: 'waypoints',
           layout: {
-            'icon-image': 'teardrop',
-            'icon-size': 1.0, // Fixed size, slightly larger
+            'icon-image': ['case', ['boolean', ['get', 'selected'], false], 'teardrop-selected', 'teardrop'],
+            'icon-size': 1.0,
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
-            'icon-pitch-alignment': 'viewport', // Keep upright when tilted
+            'icon-pitch-alignment': 'viewport',
             'icon-rotate': ['get', 'heading'],
             'icon-rotation-alignment': 'map',
             'icon-anchor': 'center',
             'text-field': ['to-string', ['get', 'index']],
             'text-size': 12,
             'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-            'text-offset': [0, 0],
+            'text-offset': [0, 0.1], // Slight offset to center in the circle part
             'text-anchor': 'center',
             'text-allow-overlap': true,
             'text-ignore-placement': true
           },
           paint: {
-            'text-color': '#ffffff', // White text for better contrast on blue icon
-            'icon-opacity': 1,
-            'icon-halo-color': ['case', ['boolean', ['get', 'selected'], false], '#ef4444', 'transparent'], // Bright Red Halo
-            'icon-halo-width': ['case', ['boolean', ['get', 'selected'], false], 5, 0] // Thicker halo
+            'text-color': ['case', ['boolean', ['get', 'selected'], false], '#ffffff', '#3b82f6'], // White on red, Blue on white circle (wait, icon has white circle)
+            // Actually, the icon has a white circle in the center. 
+            // Blue Icon: Blue body, White circle. Text should be Blue.
+            // Red Icon: Red body, White circle. Text should be Red.
+            'icon-opacity': 1
           }
         });
       }
