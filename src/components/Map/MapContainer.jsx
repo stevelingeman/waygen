@@ -243,25 +243,26 @@ export default function MapContainer({ onPolygonDrawn }) {
           source: 'waypoints',
           layout: {
             'icon-image': 'teardrop',
-            'icon-size': 0.8,
+            'icon-size': 1.0, // Fixed size, slightly larger
             'icon-allow-overlap': true,
-            'icon-ignore-placement': true, // CRITICAL: Forces icon to show despite overlap
+            'icon-ignore-placement': true,
+            'icon-pitch-alignment': 'viewport', // Keep upright when tilted
             'icon-rotate': ['get', 'heading'],
             'icon-rotation-alignment': 'map',
             'icon-anchor': 'center',
             'text-field': ['to-string', ['get', 'index']],
-            'text-size': 11,
+            'text-size': 12,
             'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
             'text-offset': [0, 0],
             'text-anchor': 'center',
             'text-allow-overlap': true,
-            'text-ignore-placement': true // CRITICAL: Forces text to show despite overlap
+            'text-ignore-placement': true
           },
           paint: {
-            'text-color': '#3b82f6',
-            'icon-opacity': ['case', ['boolean', ['get', 'selected'], false], 1, 0.85],
-            'icon-halo-color': ['case', ['boolean', ['get', 'selected'], false], '#facc15', 'transparent'],
-            'icon-halo-width': 3
+            'text-color': '#ffffff', // White text for better contrast on blue icon
+            'icon-opacity': 1,
+            'icon-halo-color': ['case', ['boolean', ['get', 'selected'], false], '#ef4444', 'transparent'], // Bright Red Halo
+            'icon-halo-width': ['case', ['boolean', ['get', 'selected'], false], 5, 0] // Thicker halo
           }
         });
       }
