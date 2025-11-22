@@ -413,38 +413,79 @@ export default function MapContainer({ onPolygonDrawn }) {
       };
       loadIcon('teardrop', TEARDROP_IMAGE);
       loadIcon('teardrop-selected', TEARDROP_SELECTED_IMAGE);
+
+      // Force Initial Data Update
+      // This ensures waypoints and path are rendered if they exist before map load
+      const currentWaypoints = useMissionStore.getState().waypoints;
+      const currentSelectedIds = useMissionStore.getState().selectedIds;
+
+      if (currentWaypoints.length > 0) {
+        const features = currentWaypoints.map((wp, index) => ({
+          type: 'Feature',
+          properties: {
+            id: wp.id,
+            index: index + 1,
+            selected: currentSelectedIds.includes(wp.id),
+            heading: wp.heading || 0
+          },
+          geometry: {
+            type: 'Point',
+            coordinates: [wp.lng, wp.lat]
+          }
+        }));
+        map.current.getSource('waypoints').setData({ type: 'FeatureCollection', features });
+
+        const lineCoords = currentWaypoints.map(wp => [wp.lng, wp.lat]);
+        map.current.getSource('mission-path').setData({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: lineCoords }
+        });
+      }
     });
 
   }, []);
 
+  // Force Layout Updates (Fix for HMR/Persisted Styles)
+  useEffect(() => {
+    if (!map.current || !map.current.getLayer('waypoints-symbol')) return;
+
+    // Ensure text is centered and scaling is applied
+    map.current.setLayoutProperty('waypoints-symbol', 'text-offset', [0, 0]);
+    map.current.setLayoutProperty('waypoints-symbol', 'text-anchor', 'center');
+    map.current.setLayoutProperty('waypoints-symbol', 'icon-anchor', 'center');
+    map.current.setLayoutProperty('waypoints-symbol', 'text-rotation-alignment', 'viewport');
+
+    // Re-apply scaling if needed (though addLayer handles it, this is safe)
+    // map.current.setLayoutProperty('waypoints-symbol', 'icon-size', ...); 
+  }, []);
+
   // Update Waypoints Source & Path
   useEffect(() => {
-    if (!map.current || !map.current.getSource('waypoints')) return;
+    if (!map.current) return;
 
-    // Update Points
-    const features = waypoints.map((wp, index) => ({
-      type: 'Feature',
-      properties: {
-        id: wp.id,
-        index: index + 1,
-        selected: selectedIds.includes(wp.id),
-        heading: wp.heading || 0
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: [wp.lng, wp.lat]
-      }
-    }));
+    const wpSource = map.current.getSource('waypoints');
+    const pathSource = map.current.getSource('mission-path');
 
-    map.current.getSource('waypoints').setData({
-      type: 'FeatureCollection',
-      features
-    });
+    if (wpSource) {
+      const features = waypoints.map((wp, index) => ({
+        type: 'Feature',
+        properties: {
+          id: wp.id,
+          index: index + 1,
+          selected: selectedIds.includes(wp.id),
+          heading: wp.heading || 0
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [wp.lng, wp.lat]
+        }
+      }));
+      wpSource.setData({ type: 'FeatureCollection', features });
+    }
 
-    // Update Path Line
-    if (map.current.getSource('mission-path')) {
+    if (pathSource) {
       const lineCoords = waypoints.map(wp => [wp.lng, wp.lat]);
-      map.current.getSource('mission-path').setData({
+      pathSource.setData({
         type: 'Feature',
         geometry: {
           type: 'LineString',
