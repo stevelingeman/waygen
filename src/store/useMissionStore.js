@@ -3,51 +3,73 @@ import { create } from 'zustand';
 export const useMissionStore = create((set, get) => ({
   waypoints: [],
   selectedIds: [],
-  
+
   // History Stack
   past: [],
   future: [],
 
+  // Global Settings
+  settings: {
+    altitude: 60,
+    speed: 10, // m/s
+    units: 'metric', // metric, imperial
+    overlap: 80,
+    angle: 0,
+    gimbalPitch: -90,
+    autoDirection: false,
+    straightenLegs: false,
+    generateEveryPoint: false,
+    waypointAction: 'none', // none, photo, record
+    photoInterval: 2, // seconds
+    reversePath: false
+  },
+
   setWaypoints: (newWaypoints) => {
     const { waypoints, past } = get();
-    set({ 
-      waypoints: newWaypoints, 
-      past: [...past, waypoints], 
-      future: [] 
+    set({
+      waypoints: newWaypoints,
+      past: [...past, waypoints],
+      future: []
     });
+  },
+
+  updateSettings: (newSettings) => {
+    set((state) => ({
+      settings: { ...state.settings, ...newSettings }
+    }));
   },
 
   // Selection Logic
   selectWaypoint: (id, multi) => set((state) => ({
-    selectedIds: multi 
+    selectedIds: multi
       ? (state.selectedIds.includes(id) ? state.selectedIds.filter(i => i !== id) : [...state.selectedIds, id])
       : [id]
   })),
-  
+
   setSelectedIds: (ids) => set({ selectedIds: ids }),
   clearSelection: () => set({ selectedIds: [] }),
 
   // Bulk Edit Logic
   updateSelectedWaypoints: (updates) => {
     const { waypoints, selectedIds, past } = get();
-    const newWaypoints = waypoints.map(wp => 
+    const newWaypoints = waypoints.map(wp =>
       selectedIds.includes(wp.id) ? { ...wp, ...updates } : wp
     );
-    set({ 
-      waypoints: newWaypoints, 
-      past: [...past, waypoints], 
-      future: [] 
+    set({
+      waypoints: newWaypoints,
+      past: [...past, waypoints],
+      future: []
     });
   },
 
   deleteSelectedWaypoints: () => {
     const { waypoints, selectedIds, past } = get();
     const newWaypoints = waypoints.filter(wp => !selectedIds.includes(wp.id));
-    set({ 
-      waypoints: newWaypoints, 
+    set({
+      waypoints: newWaypoints,
       selectedIds: [],
-      past: [...past, waypoints], 
-      future: [] 
+      past: [...past, waypoints],
+      future: []
     });
   },
 

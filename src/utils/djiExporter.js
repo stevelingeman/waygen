@@ -1,12 +1,12 @@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
-export const downloadKMZ = async (waypoints, missionName = "MiniMission") => {
+export const downloadKMZ = async (waypoints, settings, missionName = "MiniMission") => {
   const zip = new JSZip();
   const now = Date.now();
+  const { speed, straightenLegs, waypointAction, gimbalPitch } = settings;
 
   // 1. template.kml
-  // Added wpml:templateId to ensure linking
   const templateXML = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:wpml="http://www.dji.com/wpmz/1.0.2">
   <Document>
@@ -17,7 +17,7 @@ export const downloadKMZ = async (waypoints, missionName = "MiniMission") => {
       <wpml:finishAction>goHome</wpml:finishAction>
       <wpml:exitOnRCLost>executeLostAction</wpml:exitOnRCLost>
       <wpml:executeRCLostAction>hover</wpml:executeRCLostAction>
-      <wpml:globalTransitionalSpeed>2.5</wpml:globalTransitionalSpeed>
+      <wpml:globalTransitionalSpeed>${speed}</wpml:globalTransitionalSpeed>
       <wpml:droneInfo>
         <wpml:droneEnumValue>68</wpml:droneEnumValue>
         <wpml:droneSubEnumValue>0</wpml:droneSubEnumValue>
@@ -31,32 +31,77 @@ export const downloadKMZ = async (waypoints, missionName = "MiniMission") => {
   let placemarks = "";
   waypoints.forEach((wp, i) => {
     const isFirst = i === 0;
+    const isLast = i === waypoints.length - 1;
     const actionId = i + 1;
-    
-    const actionXML = `
+
+    // Action Generation Logic
+    let actions = "";
+    let actionCount = 0;
+
+    // 1. Gimbal Action (Always on first point, or if pitch changes - simplified to first point for now)
+    if (isFirst) {
+      actions += `
+        <wpml:action>
+          <wpml:actionId>${actionCount++}</wpml:actionId>
+          <wpml:actionActuatorFunc>gimbalRotate</wpml:actionActuatorFunc>
+          <wpml:actionActuatorFuncParam>
+            <wpml:gimbalHeadingYawBase>aircraft</wpml:gimbalHeadingYawBase>
+            <wpml:gimbalRotateMode>absoluteAngle</wpml:gimbalRotateMode>
+            <wpml:gimbalPitchRotateEnable>1</wpml:gimbalPitchRotateEnable>
+            <wpml:gimbalPitchRotateAngle>${gimbalPitch}</wpml:gimbalPitchRotateAngle>
+            <wpml:gimbalRollRotateEnable>0</wpml:gimbalRollRotateEnable>
+            <wpml:gimbalYawRotateEnable>0</wpml:gimbalYawRotateEnable>
+            <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
+          </wpml:actionActuatorFuncParam>
+        </wpml:action>`;
+    }
+
+    // 2. Waypoint Actions (Photo/Record)
+    if (waypointAction === 'photo') {
+      actions += `
+        <wpml:action>
+          <wpml:actionId>${actionCount++}</wpml:actionId>
+          <wpml:actionActuatorFunc>takePhoto</wpml:actionActuatorFunc>
+          <wpml:actionActuatorFuncParam>
+            <wpml:fileSuffix>point${i}</wpml:fileSuffix>
+            <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
+          </wpml:actionActuatorFuncParam>
+        </wpml:action>`;
+    } else if (waypointAction === 'record') {
+      if (isFirst) {
+        actions += `
+            <wpml:action>
+              <wpml:actionId>${actionCount++}</wpml:actionId>
+              <wpml:actionActuatorFunc>startRecord</wpml:actionActuatorFunc>
+              <wpml:actionActuatorFuncParam>
+                <wpml:fileSuffix>mission</wpml:fileSuffix>
+                <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
+              </wpml:actionActuatorFuncParam>
+            </wpml:action>`;
+      } else if (isLast) {
+        actions += `
+            <wpml:action>
+              <wpml:actionId>${actionCount++}</wpml:actionId>
+              <wpml:actionActuatorFunc>stopRecord</wpml:actionActuatorFunc>
+              <wpml:actionActuatorFuncParam>
+                <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
+              </wpml:actionActuatorFuncParam>
+            </wpml:action>`;
+      }
+    }
+
+    const actionGroupXML = actionCount > 0 ? `
       <wpml:actionGroup>
         <wpml:actionGroupId>${actionId}</wpml:actionGroupId>
         <wpml:actionGroupStartIndex>${i}</wpml:actionGroupStartIndex>
         <wpml:actionGroupEndIndex>${i}</wpml:actionGroupEndIndex>
-        <wpml:actionGroupMode>parallel</wpml:actionGroupMode>
+        <wpml:actionGroupMode>sequence</wpml:actionGroupMode>
         <wpml:actionTrigger>
           <wpml:actionTriggerType>reachPoint</wpml:actionTriggerType>
         </wpml:actionTrigger>
-        <wpml:action>
-          <wpml:actionId>${actionId}</wpml:actionId>
-          <wpml:actionActuatorFunc>${isFirst ? 'gimbalRotate' : 'gimbalEvenlyRotate'}</wpml:actionActuatorFunc>
-          <wpml:actionActuatorFuncParam>
-            <wpml:gimbalPitchRotateAngle>${wp.gimbalPitch}</wpml:gimbalPitchRotateAngle>
-            <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
-            ${isFirst ? `<wpml:gimbalHeadingYawBase>aircraft</wpml:gimbalHeadingYawBase>
-              <wpml:gimbalRotateMode>absoluteAngle</wpml:gimbalRotateMode>
-              <wpml:gimbalPitchRotateEnable>1</wpml:gimbalPitchRotateEnable>` : ''}
-          </wpml:actionActuatorFuncParam>
-        </wpml:action>
-      </wpml:actionGroup>`;
+        ${actions}
+      </wpml:actionGroup>` : "";
 
-    // CHANGE 1: Added ",0" to coordinates (Longitude,Latitude,Altitude)
-    // CHANGE 2: Set HeadingAngleEnable to 0 (Let drone follow path automatically)
     placemarks += `
     <Placemark>
       <Point><coordinates>${wp.lng},${wp.lat},0</coordinates></Point>
@@ -69,8 +114,8 @@ export const downloadKMZ = async (waypoints, missionName = "MiniMission") => {
         <wpml:waypointHeadingAngleEnable>0</wpml:waypointHeadingAngleEnable>
         <wpml:waypointHeadingPathMode>followBadArc</wpml:waypointHeadingPathMode>
       </wpml:waypointHeadingParam>
-      <wpml:useStraightLine>0</wpml:useStraightLine>
-      ${actionXML}
+      <wpml:useStraightLine>${straightenLegs ? 1 : 0}</wpml:useStraightLine>
+      ${actionGroupXML}
     </Placemark>`;
   });
 
@@ -82,7 +127,7 @@ export const downloadKMZ = async (waypoints, missionName = "MiniMission") => {
       <wpml:finishAction>goHome</wpml:finishAction>
       <wpml:exitOnRCLost>executeLostAction</wpml:exitOnRCLost>
       <wpml:executeRCLostAction>hover</wpml:executeRCLostAction>
-      <wpml:globalTransitionalSpeed>2.5</wpml:globalTransitionalSpeed>
+      <wpml:globalTransitionalSpeed>${speed}</wpml:globalTransitionalSpeed>
       <wpml:droneInfo>
         <wpml:droneEnumValue>68</wpml:droneEnumValue>
         <wpml:droneSubEnumValue>0</wpml:droneSubEnumValue>
@@ -92,7 +137,7 @@ export const downloadKMZ = async (waypoints, missionName = "MiniMission") => {
       <wpml:templateId>0</wpml:templateId>
       <wpml:executeHeightMode>relativeToStartPoint</wpml:executeHeightMode>
       <wpml:waylineId>0</wpml:waylineId>
-      <wpml:autoFlightSpeed>2.5</wpml:autoFlightSpeed>
+      <wpml:autoFlightSpeed>${speed}</wpml:autoFlightSpeed>
       ${placemarks}
     </Folder>
   </Document>
