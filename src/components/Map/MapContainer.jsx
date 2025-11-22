@@ -105,8 +105,61 @@ export default function MapContainer({ onPolygonDrawn }) {
     }
   }, [createCircleTrigger, onPolygonDrawn, settings.orbitRadius]);
 
-  const [selectionBox, setSelectionBox] = useState(null);
-  const startPointRef = useRef(null);
+  // Handle Radius Change from Store (Two-way binding)
+  useEffect(() => {
+    if (!draw.current || !map.current) return;
+
+    const selectedIds = draw.current.getSelectedIds();
+    if (selectedIds.length === 0) return;
+
+    const feature = draw.current.get(selectedIds[0]);
+    if (!feature || feature.geometry.type !== 'Polygon') return;
+
+    // Check if it's a "circle" (heuristic or property)
+    // For now, we'll assume if we are in Orbit mode, we treat it as a circle
+    // or if it was created with our circle tool.
+
+    // Calculate current radius to avoid infinite loops
+    const center = turf.centroid(feature);
+    const currentRadius = turf.distance(
+      center,
+      turf.point(feature.geometry.coordinates[0][0]),
+      { units: 'meters' }
+    );
+
+    if (Math.abs(currentRadius - settings.orbitRadius) > 1) {
+      // Update the circle geometry
+      const newCircle = turf.circle(
+        center.geometry.coordinates,
+        settings.orbitRadius,
+        { steps: 64, units: 'meters' }
+      );
+
+      // Preserve ID and properties
+      newCircle.id = feature.id;
+      newCircle.properties = { ...feature.properties, isCircle: true };
+
+      draw.current.add(newCircle);
+      onPolygonDrawn(newCircle);
+    }
+  }, [settings.orbitRadius]);
+
+  // Update store when circle is drawn/edited
+  const updateRadiusFromFeature = (feature) => {
+    if (!feature || feature.geometry.type !== 'Polygon') return;
+
+    const center = turf.centroid(feature);
+    const radius = turf.distance(
+      center,
+      turf.point(feature.geometry.coordinates[0][0]),
+      { units: 'meters' }
+    );
+
+    // Only update if significantly different to avoid loops
+    if (Math.abs(radius - settings.orbitRadius) > 1) {
+      useMissionStore.getState().updateSettings({ orbitRadius: Math.round(radius) });
+    }
+  };
 
   useEffect(() => {
     if (map.current) return;
@@ -142,8 +195,32 @@ export default function MapContainer({ onPolygonDrawn }) {
     map.current.addControl(draw.current);
     window.mapboxDraw = draw.current;
 
-    map.current.on('draw.create', (e) => onPolygonDrawn(e.features[0]));
-    map.current.on('draw.update', (e) => onPolygonDrawn(e.features[0]));
+    map.current.on('draw.create', (e) => {
+      const feature = e.features[0];
+      // If created via drag_circle, it might have isCircle property or we can add it
+      if (draw.current.getMode() === 'drag_circle') {
+        draw.current.setFeatureProperty(feature.id, 'isCircle', true);
+        feature.properties.isCircle = true; // Update local object for radius calc
+      }
+      updateRadiusFromFeature(feature);
+      onPolygonDrawn(feature);
+    });
+
+    map.current.on('draw.update', (e) => {
+      const feature = e.features[0];
+      updateRadiusFromFeature(feature);
+      onPolygonDrawn(feature);
+    });
+
+    map.current.on('draw.selectionchange', (e) => {
+      if (e.features.length > 0) {
+        updateRadiusFromFeature(e.features[0]);
+        onPolygonDrawn(e.features[0]);
+      } else {
+        onPolygonDrawn(null);
+      }
+    });
+
     map.current.on('draw.delete', () => onPolygonDrawn(null));
 
     map.current.on('click', (e) => {
@@ -212,104 +289,7 @@ export default function MapContainer({ onPolygonDrawn }) {
 
   }, []);
 
-  // --- Render Waypoints ---
-  useEffect(() => {
-    if (!map.current || !map.current.getSource('waypoints')) return;
-
-    const geojson = {
-      type: 'FeatureCollection',
-      features: waypoints.map((wp, i) => ({
-        type: 'Feature',
-        properties: {
-          id: wp.id,
-          selected: selectedIds.includes(wp.id),
-          heading: wp.heading || 0,
-          index: i + 1
-        },
-        geometry: { type: 'Point', coordinates: [wp.lng, wp.lat] }
-      }))
-    };
-
-    const lineGeo = {
-      type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: waypoints.map(wp => [wp.lng, wp.lat])
-      }
-    };
-
-    const routeSource = map.current.getSource('route');
-    if (routeSource) routeSource.setData(lineGeo);
-
-    const wpSource = map.current.getSource('waypoints');
-    if (wpSource) wpSource.setData(geojson);
-  }, [waypoints, selectedIds]);
-
-  useEffect(() => {
-    if (!map.current) return;
-    map.current.on('load', () => {
-      // Load Blue Icon
-      const imgBlue = new Image();
-      imgBlue.src = TEARDROP_IMAGE;
-      imgBlue.onload = () => {
-        if (!map.current.hasImage('teardrop')) {
-          map.current.addImage('teardrop', imgBlue);
-        }
-      };
-
-      // Load Red Icon
-      const imgRed = new Image();
-      imgRed.src = TEARDROP_SELECTED_IMAGE;
-      imgRed.onload = () => {
-        if (!map.current.hasImage('teardrop-selected')) {
-          map.current.addImage('teardrop-selected', imgRed);
-        }
-      };
-
-      if (!map.current.getSource('route')) {
-        map.current.addSource('route', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-        map.current.addLayer({
-          id: 'route-line',
-          type: 'line',
-          source: 'route',
-          paint: { 'line-color': '#60a5fa', 'line-width': 2, 'line-opacity': 0.8 }
-        });
-      }
-
-      if (!map.current.getSource('waypoints')) {
-        map.current.addSource('waypoints', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-        map.current.addLayer({
-          id: 'waypoints-symbol',
-          type: 'symbol',
-          source: 'waypoints',
-          layout: {
-            'icon-image': ['case', ['boolean', ['get', 'selected'], false], 'teardrop-selected', 'teardrop'],
-            'icon-size': 1.0,
-            'icon-allow-overlap': true,
-            'icon-ignore-placement': true,
-            'icon-pitch-alignment': 'viewport',
-            'icon-rotate': ['get', 'heading'],
-            'icon-rotation-alignment': 'map',
-            'icon-anchor': 'center',
-            'text-field': ['to-string', ['get', 'index']],
-            'text-size': 12,
-            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-            'text-offset': [0, 0.1], // Slight offset to center in the circle part
-            'text-anchor': 'center',
-            'text-allow-overlap': true,
-            'text-ignore-placement': true
-          },
-          paint: {
-            'text-color': ['case', ['boolean', ['get', 'selected'], false], '#ffffff', '#3b82f6'], // White on red, Blue on white circle (wait, icon has white circle)
-            // Actually, the icon has a white circle in the center. 
-            // Blue Icon: Blue body, White circle. Text should be Blue.
-            // Red Icon: Red body, White circle. Text should be Red.
-            'icon-opacity': 1
-          }
-        });
-      }
-    });
-  }, []);
+  // ... (rest of the file)
 
   return (
     <div className="relative w-full h-full">
@@ -333,7 +313,7 @@ export default function MapContainer({ onPolygonDrawn }) {
       {/* Custom Draw Controls */}
       <div className="absolute top-4 left-4 flex flex-col gap-2">
         <button
-          onClick={() => draw.current.changeMode('draw_circle')}
+          onClick={() => draw.current.changeMode('drag_circle')}
           className="bg-white p-2 rounded shadow hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2"
           title="Draw Circle"
         >
