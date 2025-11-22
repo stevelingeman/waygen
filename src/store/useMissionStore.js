@@ -21,7 +21,9 @@ export const useMissionStore = create((set, get) => ({
     generateEveryPoint: false,
     waypointAction: 'none', // none, photo, record
     photoInterval: 2, // seconds
-    reversePath: false
+    reversePath: false,
+    spacing: 10, // meters (for orbit mode)
+    pathType: 'grid' // grid, orbit
   },
 
   setWaypoints: (newWaypoints) => {

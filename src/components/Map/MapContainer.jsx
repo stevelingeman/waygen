@@ -313,6 +313,26 @@ export default function MapContainer({ onPolygonDrawn }) {
           }}
         />
       )}
+
+      {/* Custom Draw Controls */}
+      <div className="absolute top-4 left-4 flex flex-col gap-2">
+        <button
+          onClick={() => draw.current.changeMode('draw_circle')}
+          className="bg-white p-2 rounded shadow hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2"
+          title="Draw Circle"
+        >
+          <div className="w-3 h-3 rounded-full border-2 border-blue-600"></div>
+          Circle
+        </button>
+        <button
+          onClick={() => draw.current.changeMode('draw_polygon')}
+          className="bg-white p-2 rounded shadow hover:bg-gray-50 text-gray-700 font-bold text-xs flex items-center gap-2"
+          title="Draw Polygon"
+        >
+          <div className="w-3 h-3 border-2 border-blue-600"></div>
+          Polygon
+        </button>
+      </div>
     </div>
   );
 }

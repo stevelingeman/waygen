@@ -1,9 +1,68 @@
 import * as turf from '@turf/turf';
 
-export function generatePhotogrammetryPath(polygonFeature, settings) {
-  const { altitude, overlap, angle, gimbalPitch, autoDirection, generateEveryPoint, reversePath, speed } = settings;
+// ... (existing imports)
 
-  // Mini 4 Pro FOV Constant (approx 82.1 deg horizontal)
+function generateOrbitPath(polygonFeature, settings) {
+  const { altitude, speed, gimbalPitch, spacing } = settings;
+
+  // 1. Calculate Center and Radius
+  const center = turf.centroid(polygonFeature);
+  const centerCoords = center.geometry.coordinates;
+
+  // Calculate average radius from center to all vertices
+  const vertices = polygonFeature.geometry.coordinates[0];
+  let totalDist = 0;
+  vertices.forEach(v => {
+    totalDist += turf.distance(center, turf.point(v), { units: 'meters' });
+  });
+  const radius = totalDist / vertices.length;
+
+  // 2. Calculate Circumference and Number of Points
+  const circumference = 2 * Math.PI * radius;
+  const numPoints = Math.max(3, Math.round(circumference / spacing));
+
+  const waypoints = [];
+
+  // 3. Generate Points
+  for (let i = 0; i < numPoints; i++) {
+    const angle = (i / numPoints) * 360;
+    // Create point at distance 'radius' and bearing 'angle' from center
+    const pt = turf.destination(center, radius / 1000, angle, { units: 'kilometers' });
+
+    // Calculate heading: Point -> Center
+    // Bearing from Point to Center is (angle + 180) % 360
+    // But we want the drone to face center.
+    const heading = turf.bearing(pt, center);
+
+    waypoints.push({
+      id: crypto.randomUUID(),
+      lng: pt.geometry.coordinates[0],
+      lat: pt.geometry.coordinates[1],
+      altitude: Number(altitude),
+      speed: Number(speed),
+      gimbalPitch: Number(gimbalPitch),
+      heading: heading
+    });
+  }
+
+  // Close the loop? Usually orbit implies full circle, so maybe add first point at end?
+  // User didn't explicitly ask, but standard orbits often loop. 
+  // Let's add the first point to the end to complete the circle.
+  if (waypoints.length > 0) {
+    const first = waypoints[0];
+    waypoints.push({ ...first, id: crypto.randomUUID() });
+  }
+
+  return waypoints;
+}
+
+export function generatePhotogrammetryPath(polygonFeature, settings) {
+  if (settings.pathType === 'orbit') {
+    return generateOrbitPath(polygonFeature, settings);
+  }
+
+  const { altitude, overlap, angle, gimbalPitch, autoDirection, generateEveryPoint, reversePath, speed } = settings;
+  // ... (rest of existing grid logic)
   const FOV_CONSTANT = Math.tan(41.05 * (Math.PI / 180));
 
   // 1. Calculate Line Spacing in METERS

@@ -225,33 +225,67 @@ export default function SidebarMain({ currentPolygon }) {
         </Section>
 
         <Section title="Coverage" icon={MapIcon} defaultOpen={true}>
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Overlap {settings.overlap}%</label>
-            <input type="range" min="20" max="90" value={settings.overlap} onChange={e => updateSettings({ overlap: Number(e.target.value) })} className="w-full accent-blue-600" />
+          <div className="mb-3">
+            <label className="text-xs font-bold text-gray-500 mb-1 block">Path Type</label>
+            <div className="flex bg-gray-100 p-1 rounded-lg">
+              <button
+                onClick={() => updateSettings({ pathType: 'grid' })}
+                className={`flex-1 py-1 text-xs font-bold rounded-md transition-all ${settings.pathType === 'grid' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Grid
+              </button>
+              <button
+                onClick={() => updateSettings({ pathType: 'orbit' })}
+                className={`flex-1 py-1 text-xs font-bold rounded-md transition-all ${settings.pathType === 'orbit' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Orbit
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between mt-2">
-            <label className="text-sm text-gray-700">Auto Path Angle</label>
-            <input
-              type="checkbox"
-              checked={settings.autoDirection}
-              onChange={e => updateSettings({ autoDirection: e.target.checked })}
-              className="accent-blue-600 w-4 h-4"
-            />
-          </div>
+          {settings.pathType === 'grid' ? (
+            <>
+              <div>
+                <label className="text-xs font-bold text-gray-500 mb-1 block">Overlap {settings.overlap}%</label>
+                <input type="range" min="20" max="90" value={settings.overlap} onChange={e => updateSettings({ overlap: Number(e.target.value) })} className="w-full accent-blue-600" />
+              </div>
 
-          <div className={`mt-2 transition-opacity ${settings.autoDirection ? 'opacity-50' : 'opacity-100'}`}>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Path Angle {settings.angle}°</label>
-            <input
-              type="range"
-              min="0"
-              max="360"
-              value={settings.angle}
-              onChange={e => updateSettings({ angle: Number(e.target.value) })}
-              disabled={settings.autoDirection}
-              className={`w-full ${settings.autoDirection ? 'accent-gray-400 cursor-not-allowed' : 'accent-blue-600'}`}
-            />
-          </div>
+              <div className="flex items-center justify-between mt-2">
+                <label className="text-sm text-gray-700">Auto Path Angle</label>
+                <input
+                  type="checkbox"
+                  checked={settings.autoDirection}
+                  onChange={e => updateSettings({ autoDirection: e.target.checked })}
+                  className="accent-blue-600 w-4 h-4"
+                />
+              </div>
+
+              <div className={`mt-2 transition-opacity ${settings.autoDirection ? 'opacity-50' : 'opacity-100'}`}>
+                <label className="text-xs font-bold text-gray-500 mb-1 block">Path Angle {settings.angle}°</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="360"
+                  value={settings.angle}
+                  onChange={e => updateSettings({ angle: Number(e.target.value) })}
+                  disabled={settings.autoDirection}
+                  className={`w-full ${settings.autoDirection ? 'accent-gray-400 cursor-not-allowed' : 'accent-blue-600'}`}
+                />
+              </div>
+            </>
+          ) : (
+            <div>
+              <label className="text-xs font-bold text-gray-500 mb-1 block">Spacing (m)</label>
+              <input
+                type="number"
+                min="1"
+                value={settings.spacing}
+                onChange={e => updateSettings({ spacing: Number(e.target.value) })}
+                className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">Distance between waypoints along the perimeter.</p>
+            </div>
+          )}
 
           <div className="flex items-center justify-between mt-2">
             <label className="text-sm text-gray-700">Reverse Path</label>
