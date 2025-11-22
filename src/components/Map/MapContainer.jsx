@@ -290,6 +290,79 @@ export default function MapContainer({ onPolygonDrawn }) {
       }
     });
 
+    map.current.on('load', () => {
+      // Add Waypoints Source
+      map.current.addSource('waypoints', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+
+      // Add Waypoints Layer
+      map.current.addLayer({
+        id: 'waypoints-symbol',
+        type: 'symbol',
+        source: 'waypoints',
+        layout: {
+          'icon-image': ['case', ['get', 'selected'], 'teardrop-selected', 'teardrop'],
+          'icon-size': 0.75, // Slightly larger for visibility
+          'icon-anchor': 'bottom',
+          'icon-allow-overlap': true,
+          'text-field': ['to-string', ['get', 'index']],
+          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+          'text-size': 11,
+          'text-offset': [0, -2.5],
+          'text-anchor': 'bottom',
+          'text-allow-overlap': true
+        },
+        paint: {
+          'text-color': '#ffffff',
+          'text-halo-color': '#000000',
+          'text-halo-width': 1
+        }
+      });
+
+      // Load Images
+      const loadIcon = (name, url) => {
+        const img = new Image();
+        img.src = url;
+        img.onload = () => {
+          if (!map.current.hasImage(name)) map.current.addImage(name, img);
+        };
+      };
+      loadIcon('teardrop', TEARDROP_IMAGE);
+      loadIcon('teardrop-selected', TEARDROP_SELECTED_IMAGE);
+    });
+
+  }, []);
+
+  // Update Waypoints Source
+  useEffect(() => {
+    if (!map.current || !map.current.getSource('waypoints')) return;
+
+    const features = waypoints.map((wp, index) => ({
+      type: 'Feature',
+      properties: {
+        id: wp.id,
+        index: index + 1,
+        selected: selectedIds.includes(wp.id)
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [wp.lng, wp.lat]
+      }
+    }));
+
+    map.current.getSource('waypoints').setData({
+      type: 'FeatureCollection',
+      features
+    });
+  }, [waypoints, selectedIds]);
+
+  // Ensure default radius is reasonable on load
+  useEffect(() => {
+    if (settings.orbitRadius > 500) {
+      useMissionStore.getState().updateSettings({ orbitRadius: 50 });
+    }
   }, []);
 
   // ... (rest of the file)
