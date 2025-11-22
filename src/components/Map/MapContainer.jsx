@@ -502,6 +502,24 @@ export default function MapContainer({ onPolygonDrawn }) {
     }
   }, []);
 
+  const [currentMode, setCurrentMode] = useState('simple_select');
+
+  useEffect(() => {
+    if (!map.current) return;
+
+    const updateMode = (e) => {
+      setCurrentMode(e.mode);
+    };
+
+    map.current.on('draw.modechange', updateMode);
+
+    return () => {
+      if (map.current) {
+        map.current.off('draw.modechange', updateMode);
+      }
+    };
+  }, []);
+
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
@@ -521,11 +539,11 @@ export default function MapContainer({ onPolygonDrawn }) {
         />
       )}
 
-      {/* Custom Draw Controls */}
-      <div className="absolute top-4 left-4 flex flex-col gap-2 bg-white rounded-md shadow-md p-1">
+      {/* Custom Draw Controls - Moved down to avoid overlap */}
+      <div className="absolute top-24 left-4 flex flex-col gap-2 bg-white rounded-md shadow-md p-1">
         <button
           onClick={() => draw.current.changeMode('simple_select')}
-          className="p-2 rounded hover:bg-gray-100 text-gray-700 flex items-center justify-center"
+          className={`p-2 rounded hover:bg-gray-100 flex items-center justify-center ${currentMode === 'simple_select' || currentMode === 'direct_select' ? 'text-blue-600 bg-blue-50' : 'text-gray-700'}`}
           title="Select (Pointer)"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -535,7 +553,7 @@ export default function MapContainer({ onPolygonDrawn }) {
         </button>
         <button
           onClick={() => draw.current.changeMode('draw_rectangle')}
-          className="p-2 rounded hover:bg-gray-100 text-gray-700 flex items-center justify-center"
+          className={`p-2 rounded hover:bg-gray-100 flex items-center justify-center ${currentMode === 'draw_rectangle' ? 'text-blue-600 bg-blue-50' : 'text-gray-700'}`}
           title="Draw Square"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -544,7 +562,7 @@ export default function MapContainer({ onPolygonDrawn }) {
         </button>
         <button
           onClick={() => draw.current.changeMode('draw_polygon')}
-          className="p-2 rounded hover:bg-gray-100 text-gray-700 flex items-center justify-center"
+          className={`p-2 rounded hover:bg-gray-100 flex items-center justify-center ${currentMode === 'draw_polygon' ? 'text-blue-600 bg-blue-50' : 'text-gray-700'}`}
           title="Draw Polygon"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -553,7 +571,7 @@ export default function MapContainer({ onPolygonDrawn }) {
         </button>
         <button
           onClick={() => draw.current.changeMode('drag_circle')}
-          className="p-2 rounded hover:bg-gray-100 text-gray-700 flex items-center justify-center"
+          className={`p-2 rounded hover:bg-gray-100 flex items-center justify-center ${currentMode === 'drag_circle' ? 'text-blue-600 bg-blue-50' : 'text-gray-700'}`}
           title="Draw Circle"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
