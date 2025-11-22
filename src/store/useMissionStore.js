@@ -17,7 +17,7 @@ export const useMissionStore = create((set, get) => ({
     angle: 0,
     gimbalPitch: -90,
     autoDirection: false,
-    straightenLegs: false,
+    straightenLegs: true,
     generateEveryPoint: false,
     waypointAction: 'none', // none, photo, record
     photoInterval: 2, // seconds

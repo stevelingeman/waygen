@@ -223,7 +223,7 @@ export default function SidebarMain({ currentPolygon }) {
           </div>
 
           <div className="flex items-center justify-between mt-2">
-            <label className="text-sm text-gray-700">Auto Direction</label>
+            <label className="text-sm text-gray-700">Auto Path Angle</label>
             <input
               type="checkbox"
               checked={settings.autoDirection}
@@ -232,12 +232,18 @@ export default function SidebarMain({ currentPolygon }) {
             />
           </div>
 
-          {!settings.autoDirection && (
-            <div className="mt-2">
-              <label className="text-xs font-bold text-gray-500 mb-1 block">Path Angle {settings.angle}°</label>
-              <input type="range" min="0" max="360" value={settings.angle} onChange={e => updateSettings({ angle: Number(e.target.value) })} className="w-full accent-blue-600" />
-            </div>
-          )}
+          <div className={`mt-2 transition-opacity ${settings.autoDirection ? 'opacity-50' : 'opacity-100'}`}>
+            <label className="text-xs font-bold text-gray-500 mb-1 block">Path Angle {settings.angle}°</label>
+            <input
+              type="range"
+              min="0"
+              max="360"
+              value={settings.angle}
+              onChange={e => updateSettings({ angle: Number(e.target.value) })}
+              disabled={settings.autoDirection}
+              className={`w-full ${settings.autoDirection ? 'accent-gray-400 cursor-not-allowed' : 'accent-blue-600'}`}
+            />
+          </div>
 
           <div className="flex items-center justify-between mt-2">
             <label className="text-sm text-gray-700">Reverse Path</label>
@@ -250,7 +256,7 @@ export default function SidebarMain({ currentPolygon }) {
           </div>
         </Section>
 
-        <Section title="Camera" icon={Camera}>
+        <Section title="Camera" icon={Camera} defaultOpen={true}>
           <div>
             <label className="text-xs font-bold text-gray-500 mb-1 block">Gimbal Pitch {settings.gimbalPitch}°</label>
             <input type="range" min="-90" max="0" value={settings.gimbalPitch} onChange={e => updateSettings({ gimbalPitch: Number(e.target.value) })} className="w-full accent-blue-600" />
@@ -281,7 +287,7 @@ export default function SidebarMain({ currentPolygon }) {
           )}
         </Section>
 
-        <Section title="Advanced" icon={Layers}>
+        <Section title="Advanced" icon={Layers} defaultOpen={true}>
           <div className="flex items-center justify-between">
             <label className="text-sm text-gray-700">Straighten Legs</label>
             <input
