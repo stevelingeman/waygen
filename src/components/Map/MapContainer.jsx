@@ -200,13 +200,46 @@ export default function MapContainer({ onPolygonDrawn }) {
 
     map.current.on('draw.create', (e) => {
       const feature = e.features[0];
-      // If created via drag_circle, it might have isCircle property or we can add it
+
+      // 1. Enforce "Circle" property if created via drag_circle
       if (draw.current.getMode() === 'drag_circle') {
         draw.current.setFeatureProperty(feature.id, 'isCircle', true);
-        feature.properties.isCircle = true; // Update local object for radius calc
+        feature.properties.isCircle = true;
       }
-      updateRadiusFromFeature(feature);
-      onPolygonDrawn(feature);
+
+      // 2. Check for "Accidental Large Circle" (Click vs Drag)
+      // If the user just clicks, it might create a huge default circle. We resize it to 50m.
+      const center = turf.centroid(feature);
+      const currentRadius = turf.distance(
+        center,
+        turf.point(feature.geometry.coordinates[0][0]),
+        { units: 'meters' }
+      );
+
+      if (currentRadius > 500) {
+        // Resize to 50m
+        const newCircle = turf.circle(
+          center.geometry.coordinates,
+          50,
+          { steps: 64, units: 'meters' }
+        );
+        newCircle.id = feature.id;
+        newCircle.properties = { ...feature.properties, isCircle: true };
+
+        draw.current.add(newCircle);
+        // Update store with 50m
+        useMissionStore.getState().updateSettings({ orbitRadius: 50 });
+        onPolygonDrawn(newCircle);
+      } else {
+        updateRadiusFromFeature(feature);
+        onPolygonDrawn(feature);
+      }
+
+      // 3. Auto-Deselect Tool (Switch to Simple Select)
+      // This prevents drawing another circle immediately and shows resize handles
+      setTimeout(() => {
+        draw.current.changeMode('simple_select', { featureIds: [feature.id] });
+      }, 100);
     });
 
     map.current.on('draw.update', (e) => {
@@ -304,9 +337,11 @@ export default function MapContainer({ onPolygonDrawn }) {
         source: 'waypoints',
         layout: {
           'icon-image': ['case', ['get', 'selected'], 'teardrop-selected', 'teardrop'],
-          'icon-size': 0.75, // Slightly larger for visibility
+          'icon-size': 0.75,
           'icon-anchor': 'bottom',
           'icon-allow-overlap': true,
+          'icon-rotate': ['get', 'heading'],
+          'icon-rotation-alignment': 'map',
           'text-field': ['to-string', ['get', 'index']],
           'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
           'text-size': 11,
@@ -344,7 +379,8 @@ export default function MapContainer({ onPolygonDrawn }) {
       properties: {
         id: wp.id,
         index: index + 1,
-        selected: selectedIds.includes(wp.id)
+        selected: selectedIds.includes(wp.id),
+        heading: wp.heading || 0
       },
       geometry: {
         type: 'Point',
