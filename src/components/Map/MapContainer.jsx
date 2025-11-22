@@ -79,7 +79,15 @@ export default function MapContainer({ onPolygonDrawn }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const draw = useRef(null);
-  const { waypoints, selectedIds, selectWaypoint, setSelectedIds } = useMissionStore();
+  const { waypoints, selectedIds, selectWaypoint, setSelectedIds, resetTrigger } = useMissionStore();
+
+  // Handle Reset
+  useEffect(() => {
+    if (resetTrigger > 0 && draw.current) {
+      draw.current.deleteAll();
+      onPolygonDrawn(null);
+    }
+  }, [resetTrigger, onPolygonDrawn]);
 
   const [selectionBox, setSelectionBox] = useState(null);
   const startPointRef = useRef(null);

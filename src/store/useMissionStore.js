@@ -96,5 +96,15 @@ export const useMissionStore = create((set, get) => ({
       past: [...past, waypoints],
       future: newFuture
     });
-  }
+  },
+
+  // Reset Logic
+  resetTrigger: 0,
+  resetMission: () => set((state) => ({
+    waypoints: [],
+    selectedIds: [],
+    past: [],
+    future: [],
+    resetTrigger: state.resetTrigger + 1
+  }))
 }));

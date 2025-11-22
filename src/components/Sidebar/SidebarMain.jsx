@@ -30,8 +30,14 @@ export default function SidebarMain({ currentPolygon }) {
   const {
     waypoints, selectedIds, settings,
     setWaypoints, updateSelectedWaypoints, deleteSelectedWaypoints,
-    undo, redo, updateSettings
+    undo, redo, updateSettings, resetMission
   } = useMissionStore();
+
+  const handleReset = () => {
+    if (confirm("Are you sure you want to reset the mission? This will clear all waypoints and shapes.")) {
+      resetMission();
+    }
+  };
 
   const handleGenerate = () => {
     if (!currentPolygon) return alert("Draw a shape first!");
@@ -166,6 +172,8 @@ export default function SidebarMain({ currentPolygon }) {
       <div className="p-4 border-b flex justify-between items-center bg-gray-50">
         <h1 className="font-bold text-xl text-gray-800">Waygen</h1>
         <div className="flex gap-1">
+          <button onClick={handleReset} className="p-2 hover:bg-red-100 hover:text-red-600 rounded-full shadow-sm border transition-all" title="Reset Mission"><Trash2 size={16} /></button>
+          <div className="w-px h-6 bg-gray-300 mx-1 self-center"></div>
           <button onClick={undo} className="p-2 hover:bg-white rounded-full shadow-sm border transition-all"><Undo size={16} /></button>
           <button onClick={redo} className="p-2 hover:bg-white rounded-full shadow-sm border transition-all"><Redo size={16} /></button>
         </div>
