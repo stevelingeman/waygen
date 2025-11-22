@@ -13,7 +13,7 @@ export const parseImport = async (file) => {
   if (file.name.toLowerCase().endsWith('.kmz')) {
     try {
       const zip = await JSZip.loadAsync(file);
-      
+
       // CRITICAL FIX: Look for DJI "waylines.wpml" FIRST.
       // DJI puts metadata in 'template.kml' (empty) and points in 'waylines.wpml'.
       let targetFile = Object.keys(zip.files).find(n => n.toLowerCase().endsWith('waylines.wpml'));
@@ -26,15 +26,41 @@ export const parseImport = async (file) => {
       if (targetFile) {
         const xmlText = await zip.file(targetFile).async('text');
         const xmlDom = new DOMParser().parseFromString(xmlText, 'text/xml');
-        
+
         // Convert XML to GeoJSON
         const geoJSON = kml(xmlDom);
-        
-        // Valid KMLs might return empty features if parsing failed
-        if (!geoJSON || !geoJSON.features || geoJSON.features.length === 0) {
-            throw new Error("No features found in KML/WPML file.");
-        }
-        
+
+        // ENRICHMENT: Manually extract WPML data that togeojson misses
+        const placemarks = Array.from(xmlDom.getElementsByTagName("Placemark"));
+
+        geoJSON.features.forEach(feature => {
+          if (feature.geometry.type === 'Point') {
+            // Find matching Placemark by coordinates (fuzzy match)
+            const [fLng, fLat] = feature.geometry.coordinates;
+
+            const match = placemarks.find(pm => {
+              const point = pm.getElementsByTagName("Point")[0];
+              if (!point) return false;
+              const coords = point.getElementsByTagName("coordinates")[0]?.textContent.trim();
+              if (!coords) return false;
+              const [pLng, pLat] = coords.split(',').map(Number);
+              return Math.abs(pLng - fLng) < 0.000001 && Math.abs(pLat - fLat) < 0.000001;
+            });
+
+            if (match) {
+              const heading = match.getElementsByTagName("wpml:waypointHeading")[0]?.textContent;
+              const speed = match.getElementsByTagName("wpml:waypointSpeed")[0]?.textContent;
+              const height = match.getElementsByTagName("wpml:ellipsoidHeight")[0]?.textContent || match.getElementsByTagName("wpml:height")[0]?.textContent;
+              const gimbal = match.getElementsByTagName("wpml:gimbalPitchAngle")[0]?.textContent;
+
+              if (heading) feature.properties.heading = Number(heading);
+              if (speed) feature.properties.speed = Number(speed);
+              if (height) feature.properties.altitude = Number(height);
+              if (gimbal) feature.properties.gimbalPitch = Number(gimbal);
+            }
+          }
+        });
+
         return geoJSON;
       } else {
         throw new Error("No valid KML or WPML file found inside KMZ.");
@@ -44,6 +70,6 @@ export const parseImport = async (file) => {
       throw new Error("Failed to unzip or parse KMZ.");
     }
   }
-  
+
   throw new Error("Unsupported file format. Please use .kml or .kmz");
 };

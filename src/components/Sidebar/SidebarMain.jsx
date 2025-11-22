@@ -51,10 +51,10 @@ export default function SidebarMain({ currentPolygon }) {
             id: crypto.randomUUID(),
             lng: f.geometry.coordinates[0],
             lat: f.geometry.coordinates[1],
-            altitude: settings.altitude,
-            speed: settings.speed,
-            gimbalPitch: settings.gimbalPitch,
-            heading: 0
+            altitude: f.properties.altitude !== undefined ? f.properties.altitude : settings.altitude,
+            speed: f.properties.speed !== undefined ? f.properties.speed : settings.speed,
+            gimbalPitch: f.properties.gimbalPitch !== undefined ? f.properties.gimbalPitch : settings.gimbalPitch,
+            heading: f.properties.heading !== undefined ? f.properties.heading : 0
           });
         }
       });
