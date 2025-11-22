@@ -185,6 +185,14 @@ export default function MapContainer({ onPolygonDrawn }) {
     draw.current = new MapboxDraw({
       userProperties: true,
       displayControlsDefault: false,
+      controls: {
+        point: false,
+        line: false,
+        polygon: false,
+        trash: false,
+        combine_features: false,
+        uncombine_features: false
+      },
       styles: simpleStyles,
       modes: {
         ...MapboxDraw.modes,
@@ -540,7 +548,7 @@ export default function MapContainer({ onPolygonDrawn }) {
       )}
 
       {/* Custom Draw Controls - Moved down to avoid overlap */}
-      <div className="absolute top-24 left-4 flex flex-col gap-2 bg-white rounded-md shadow-md p-1">
+      <div className="absolute top-32 left-4 flex flex-col gap-2 bg-white rounded-md shadow-md p-1">
         <button
           onClick={() => draw.current.changeMode('simple_select')}
           className={`p-2 rounded hover:bg-gray-100 flex items-center justify-center ${currentMode === 'simple_select' || currentMode === 'direct_select' ? 'text-blue-600 bg-blue-50' : 'text-gray-700'}`}
