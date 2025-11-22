@@ -33,11 +33,23 @@ export const parseImport = async (file) => {
         // ENRICHMENT: Manually extract WPML data that togeojson misses
         const placemarks = Array.from(xmlDom.getElementsByTagName("Placemark"));
 
-        // Helper to get tag value, trying both with and without "wpml:" prefix
+        // Helper to get tag value, trying both with and without "wpml:" prefix, and checking localName
         const getTagValue = (element, tagName) => {
-          let tag = element.getElementsByTagName("wpml:" + tagName)[0];
-          if (!tag) tag = element.getElementsByTagName(tagName)[0];
-          return tag ? tag.textContent : null;
+          // 1. Try standard getElementsByTagName (fastest)
+          let tags = element.getElementsByTagName("wpml:" + tagName);
+          if (tags.length > 0) return tags[0].textContent;
+
+          tags = element.getElementsByTagName(tagName);
+          if (tags.length > 0) return tags[0].textContent;
+
+          // 2. Brute force: iterate all children to match localName (handles namespace weirdness)
+          const allTags = element.getElementsByTagName("*");
+          for (let i = 0; i < allTags.length; i++) {
+            if (allTags[i].localName === tagName) {
+              return allTags[i].textContent;
+            }
+          }
+          return null;
         };
 
         // Strategy: Try to match by Index first (most robust for generated files), then by Coordinates
