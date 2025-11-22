@@ -40,24 +40,32 @@ export const parseImport = async (file) => {
           return tag ? tag.textContent : null;
         };
 
-        geoJSON.features.forEach(feature => {
+        // Strategy: Try to match by Index first (most robust for generated files), then by Coordinates
+        const useIndexMatching = geoJSON.features.length === placemarks.length;
+
+        geoJSON.features.forEach((feature, index) => {
           if (feature.geometry.type === 'Point') {
-            // Find matching Placemark by coordinates (fuzzy match)
-            const [fLng, fLat] = feature.geometry.coordinates;
+            let match = null;
 
-            const match = placemarks.find(pm => {
-              const point = pm.getElementsByTagName("Point")[0];
-              if (!point) return false;
-              const coordsText = point.getElementsByTagName("coordinates")[0]?.textContent || "";
-              const coords = coordsText.trim().split(',');
-              if (coords.length < 2) return false;
+            if (useIndexMatching) {
+              match = placemarks[index];
+            } else {
+              // Fallback: Find matching Placemark by coordinates (fuzzy match)
+              const [fLng, fLat] = feature.geometry.coordinates;
+              match = placemarks.find(pm => {
+                const point = pm.getElementsByTagName("Point")[0];
+                if (!point) return false;
+                const coordsText = point.getElementsByTagName("coordinates")[0]?.textContent || "";
+                const coords = coordsText.trim().split(',');
+                if (coords.length < 2) return false;
 
-              const pLng = Number(coords[0]);
-              const pLat = Number(coords[1]);
+                const pLng = Number(coords[0]);
+                const pLat = Number(coords[1]);
 
-              // Use a slightly larger epsilon for float comparison
-              return Math.abs(pLng - fLng) < 0.00001 && Math.abs(pLat - fLat) < 0.00001;
-            });
+                // Use a slightly larger epsilon for float comparison
+                return Math.abs(pLng - fLng) < 0.0001 && Math.abs(pLat - fLat) < 0.0001;
+              });
+            }
 
             if (match) {
               const heading = getTagValue(match, "waypointHeading");
