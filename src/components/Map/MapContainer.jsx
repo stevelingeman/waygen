@@ -105,6 +105,9 @@ export default function MapContainer({ onPolygonDrawn }) {
     }
   }, [createCircleTrigger, onPolygonDrawn, settings.orbitRadius]);
 
+  const [selectionBox, setSelectionBox] = useState(null);
+  const startPointRef = useRef(null);
+
   // Handle Radius Change from Store (Two-way binding)
   useEffect(() => {
     if (!draw.current || !map.current) return;
