@@ -80,16 +80,24 @@ export const parseImport = async (file) => {
             }
 
             if (match) {
-              const heading = getTagValue(match, "waypointHeading");
+              // Heading: Try standard 'waypointHeading' then nested 'waypointHeadingAngle'
+              let heading = getTagValue(match, "waypointHeading");
+              if (heading === null) heading = getTagValue(match, "waypointHeadingAngle");
+
+              // Speed: 'waypointSpeed'
               const speed = getTagValue(match, "waypointSpeed");
-              const ellipsoidHeight = getTagValue(match, "ellipsoidHeight");
-              const height = getTagValue(match, "height");
+
+              // Altitude: 'ellipsoidHeight' -> 'height' -> 'executeHeight'
+              let altitude = getTagValue(match, "ellipsoidHeight");
+              if (altitude === null) altitude = getTagValue(match, "height");
+              if (altitude === null) altitude = getTagValue(match, "executeHeight");
+
+              // Gimbal: 'gimbalPitchAngle'
               const gimbal = getTagValue(match, "gimbalPitchAngle");
 
               if (heading !== null) feature.properties.heading = Number(heading);
               if (speed !== null) feature.properties.speed = Number(speed);
-              if (ellipsoidHeight !== null) feature.properties.altitude = Number(ellipsoidHeight);
-              else if (height !== null) feature.properties.altitude = Number(height);
+              if (altitude !== null) feature.properties.altitude = Number(altitude);
               if (gimbal !== null) feature.properties.gimbalPitch = Number(gimbal);
             }
           }
