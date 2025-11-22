@@ -188,7 +188,6 @@ export default function MapContainer({ onPolygonDrawn }) {
       styles: simpleStyles,
       modes: {
         ...MapboxDraw.modes,
-        draw_circle: CircleMode,
         drag_circle: DragCircleMode,
         draw_rectangle: DragRectangleMode,
         direct_select: DirectMode,
@@ -210,7 +209,6 @@ export default function MapContainer({ onPolygonDrawn }) {
       // 2. Handle Rectangle Creation (Optional: Tag it)
       if (draw.current.getMode() === 'draw_rectangle') {
         // It's already a polygon, so path generator handles it fine.
-        // We could tag it if needed, but 'Polygon' is sufficient.
       }
 
       // 3. Check for "Accidental Large Circle" (Click vs Drag)
@@ -540,7 +538,9 @@ export default function MapContainer({ onPolygonDrawn }) {
           className="p-2 rounded hover:bg-gray-100 text-gray-700 flex items-center justify-center"
           title="Draw Square"
         >
-          <div className="w-4 h-4 border-2 border-current"></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          </svg>
         </button>
         <button
           onClick={() => draw.current.changeMode('draw_polygon')}
@@ -556,7 +556,9 @@ export default function MapContainer({ onPolygonDrawn }) {
           className="p-2 rounded hover:bg-gray-100 text-gray-700 flex items-center justify-center"
           title="Draw Circle"
         >
-          <div className="w-4 h-4 rounded-full border-2 border-current"></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+          </svg>
         </button>
       </div>
     </div>
