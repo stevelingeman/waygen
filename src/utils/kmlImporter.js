@@ -33,6 +33,13 @@ export const parseImport = async (file) => {
         // ENRICHMENT: Manually extract WPML data that togeojson misses
         const placemarks = Array.from(xmlDom.getElementsByTagName("Placemark"));
 
+        // Helper to get tag value, trying both with and without "wpml:" prefix
+        const getTagValue = (element, tagName) => {
+          let tag = element.getElementsByTagName("wpml:" + tagName)[0];
+          if (!tag) tag = element.getElementsByTagName(tagName)[0];
+          return tag ? tag.textContent : null;
+        };
+
         geoJSON.features.forEach(feature => {
           if (feature.geometry.type === 'Point') {
             // Find matching Placemark by coordinates (fuzzy match)
@@ -41,25 +48,37 @@ export const parseImport = async (file) => {
             const match = placemarks.find(pm => {
               const point = pm.getElementsByTagName("Point")[0];
               if (!point) return false;
-              const coords = point.getElementsByTagName("coordinates")[0]?.textContent.trim();
-              if (!coords) return false;
-              const [pLng, pLat] = coords.split(',').map(Number);
-              return Math.abs(pLng - fLng) < 0.000001 && Math.abs(pLat - fLat) < 0.000001;
+              const coordsText = point.getElementsByTagName("coordinates")[0]?.textContent || "";
+              const coords = coordsText.trim().split(',');
+              if (coords.length < 2) return false;
+
+              const pLng = Number(coords[0]);
+              const pLat = Number(coords[1]);
+
+              // Use a slightly larger epsilon for float comparison
+              return Math.abs(pLng - fLng) < 0.00001 && Math.abs(pLat - fLat) < 0.00001;
             });
 
             if (match) {
-              const heading = match.getElementsByTagName("wpml:waypointHeading")[0]?.textContent;
-              const speed = match.getElementsByTagName("wpml:waypointSpeed")[0]?.textContent;
-              const height = match.getElementsByTagName("wpml:ellipsoidHeight")[0]?.textContent || match.getElementsByTagName("wpml:height")[0]?.textContent;
-              const gimbal = match.getElementsByTagName("wpml:gimbalPitchAngle")[0]?.textContent;
+              const heading = getTagValue(match, "waypointHeading");
+              const speed = getTagValue(match, "waypointSpeed");
+              const ellipsoidHeight = getTagValue(match, "ellipsoidHeight");
+              const height = getTagValue(match, "height");
+              const gimbal = getTagValue(match, "gimbalPitchAngle");
 
-              if (heading) feature.properties.heading = Number(heading);
-              if (speed) feature.properties.speed = Number(speed);
-              if (height) feature.properties.altitude = Number(height);
-              if (gimbal) feature.properties.gimbalPitch = Number(gimbal);
+              if (heading !== null) feature.properties.heading = Number(heading);
+              if (speed !== null) feature.properties.speed = Number(speed);
+              if (ellipsoidHeight !== null) feature.properties.altitude = Number(ellipsoidHeight);
+              else if (height !== null) feature.properties.altitude = Number(height);
+              if (gimbal !== null) feature.properties.gimbalPitch = Number(gimbal);
             }
           }
         });
+
+        // Valid KMLs might return empty features if parsing failed
+        if (!geoJSON || !geoJSON.features || geoJSON.features.length === 0) {
+          throw new Error("No features found in KML/WPML file.");
+        }
 
         return geoJSON;
       } else {
