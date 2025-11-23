@@ -9,6 +9,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import { useMissionStore } from '../../store/useMissionStore';
 import DragRectangleMode from '../../logic/DragRectangleMode';
+import { calculateFootprint } from '../../utils/geospatial';
 import DrawToolbar from './DrawToolbar';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -476,6 +477,32 @@ export default function MapContainer({ onPolygonDrawn }) {
         }
       });
 
+      // Add Footprints Source
+      map.current.addSource('footprints', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+
+      // Add Footprints Layer
+      map.current.addLayer({
+        id: 'footprints-fill',
+        type: 'fill',
+        source: 'footprints',
+        paint: {
+          'fill-color': [
+            'match',
+            ['%', ['get', 'index'], 4],
+            0, '#FF5733', // Red-Orange
+            1, '#33FF57', // Green
+            2, '#3357FF', // Blue
+            3, '#F333FF', // Magenta
+            '#888888' // Fallback
+          ],
+          'fill-opacity': 0.3,
+          'fill-outline-color': 'rgba(255,255,255,0.5)'
+        }
+      }, 'waypoints-symbol'); // Place below waypoints
+
       // Add Waypoints Source
       map.current.addSource('waypoints', {
         type: 'geojson',
@@ -617,6 +644,47 @@ export default function MapContainer({ onPolygonDrawn }) {
       });
     }
   }, [waypoints, selectedIds]);
+
+  // Update Footprints
+  useEffect(() => {
+    if (!map.current || !map.current.getSource('footprints')) return;
+
+    if (!settings.showFootprints) {
+      map.current.getSource('footprints').setData({ type: 'FeatureCollection', features: [] });
+      return;
+    }
+
+    const features = waypoints.map((wp, index) => {
+      // Use waypoint's heading if available, otherwise 0.
+      // Note: In a real mission, heading might be interpolated or set per waypoint.
+      // For now, we use wp.heading which is set by the store (bearing to next point).
+      // If it's the last point, it might keep the previous heading or 0.
+      const heading = wp.heading || 0;
+
+      // Use custom FOV if 'custom' is selected, otherwise map from model
+      // Actually, store already handles mapping 'customFOV' to the correct value?
+      // No, store has 'selectedDrone' and 'customFOV'.
+      // We need to determine the FOV to use.
+      // Wait, in SidebarMain we updated 'customFOV' even for presets?
+      // "updateSettings({ selectedDrone: val, customFOV: fov });"
+      // Yes, we did! So settings.customFOV always holds the correct FOV to use.
+
+      return {
+        ...calculateFootprint(
+          { lng: wp.lng, lat: wp.lat },
+          settings.altitude, // Assuming constant altitude for now, or wp.altitude if per-point
+          heading,
+          settings.customFOV
+        ),
+        properties: {
+          index: index + 1
+        }
+      };
+    }).filter(f => f !== null);
+
+    map.current.getSource('footprints').setData({ type: 'FeatureCollection', features });
+
+  }, [waypoints, settings.showFootprints, settings.altitude, settings.customFOV]);
 
   // Ensure default radius is reasonable on load
   useEffect(() => {

@@ -331,6 +331,50 @@ export default function SidebarMain({ currentPolygon }) {
               <p className="text-[10px] text-gray-400 mt-1">Speed will be adjusted to match overlap & interval.</p>
             </div>
           )}
+
+          <div className="mt-4 border-t pt-3">
+            <label className="text-xs font-bold text-gray-500 mb-1 block">Drone Model (FOV)</label>
+            <select
+              value={settings.selectedDrone}
+              onChange={e => {
+                const val = e.target.value;
+                let fov = 82.1;
+                if (val === 'dji_mini_5_pro') fov = 84;
+                if (val === 'dji_mavic_4_pro') fov = 72;
+                if (val === 'custom') fov = settings.customFOV;
+
+                updateSettings({ selectedDrone: val, customFOV: fov });
+              }}
+              className="w-full border rounded p-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="dji_mini_4_pro">DJI Mini 4 Pro (82.1°)</option>
+              <option value="dji_mini_5_pro">DJI Mini 5 Pro (84°)</option>
+              <option value="dji_mavic_4_pro">DJI Mavic 4 Pro (72°)</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+
+          {settings.selectedDrone === 'custom' && (
+            <div className="mt-2">
+              <label className="text-xs font-bold text-gray-500 mb-1 block">Custom HFOV (°)</label>
+              <input
+                type="number"
+                value={settings.customFOV}
+                onChange={e => updateSettings({ customFOV: Number(e.target.value) })}
+                className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+          )}
+
+          <div className="flex items-center justify-between mt-3">
+            <label className="text-sm text-gray-700 font-medium">Show Footprints</label>
+            <input
+              type="checkbox"
+              checked={settings.showFootprints}
+              onChange={e => updateSettings({ showFootprints: e.target.checked })}
+              className="accent-blue-600 w-4 h-4"
+            />
+          </div>
         </Section>
 
         <Section title="Advanced" icon={Layers} defaultOpen={true}>

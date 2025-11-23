@@ -25,6 +25,9 @@ export const useMissionStore = create((set, get) => ({
     orbitRadius: 50, // Default orbit radius
     pathType: 'grid',
     spacing: 10,
+    selectedDrone: 'dji_mini_4_pro',
+    customFOV: 82.1,
+    showFootprints: false,
   },
 
   // Actions
