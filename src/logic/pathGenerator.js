@@ -61,7 +61,7 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
     return generateOrbitPath(polygonFeature, settings);
   }
 
-  const { altitude, overlap, angle, gimbalPitch, autoDirection, generateEveryPoint, reversePath, speed } = settings;
+  const { altitude, sideOverlap, frontOverlap, angle, gimbalPitch, autoDirection, generateEveryPoint, reversePath, speed } = settings;
   // ... (rest of existing grid logic)
   // 1. Calculate Line Spacing in METERS
   // Use customFOV from settings (defaulting to 82.1 if missing)
@@ -69,7 +69,7 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
   const FOV_CONSTANT = Math.tan((hfov / 2) * (Math.PI / 180));
 
   const imageWidth = (altitude * FOV_CONSTANT) * 2;
-  const lineSpacingMeters = imageWidth * (1 - (overlap / 100));
+  const lineSpacingMeters = imageWidth * (1 - (sideOverlap / 100));
 
   // 2. Convert Spacing to DEGREES (Lat/Lng approximation)
   const lineSpacingDegrees = lineSpacingMeters / 111111;
@@ -156,7 +156,7 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
       // Height_ground = (2 * Altitude * tan(HFOV / 2)) * (3 / 4)
       // Interval = Height_ground * (1 - (OverlapPercentage / 100))
       const groundHeight = imageWidth * (3 / 4);
-      const frontSpacingMeters = groundHeight * (1 - (overlap / 100));
+      const frontSpacingMeters = groundHeight * (1 - (frontOverlap / 100));
 
       // Ensure we don't have infinite points if spacing is 0 (shouldn't happen with valid inputs)
       const safeSpacing = Math.max(1, frontSpacingMeters);

@@ -248,8 +248,12 @@ export default function SidebarMain({ currentPolygon }) {
           {settings.pathType === 'grid' ? (
             <>
               <div>
-                <label className="text-xs font-bold text-gray-500 mb-1 block">Overlap {settings.overlap}%</label>
-                <input type="range" min="20" max="90" value={settings.overlap} onChange={e => updateSettings({ overlap: Number(e.target.value) })} className="w-full accent-blue-600" />
+                <label className="text-xs font-bold text-gray-500 mb-1 block">Side Overlap {settings.sideOverlap}%</label>
+                <input type="range" min="0" max="90" value={settings.sideOverlap} onChange={e => updateSettings({ sideOverlap: Number(e.target.value) })} className="w-full accent-blue-600" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 mb-1 block">Front Overlap {settings.frontOverlap}%</label>
+                <input type="range" min="0" max="90" value={settings.frontOverlap} onChange={e => updateSettings({ frontOverlap: Number(e.target.value) })} className="w-full accent-blue-600" />
               </div>
 
               <div className="flex items-center justify-between mt-2">

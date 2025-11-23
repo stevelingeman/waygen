@@ -14,6 +14,8 @@ export const useMissionStore = create((set, get) => ({
     altitude: 60,
     customFOV: 82.1,
     showFootprints: false,
+    sideOverlap: 70,
+    frontOverlap: 80,
   },
 
   // Actions
