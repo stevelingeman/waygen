@@ -4,6 +4,7 @@ import { generatePhotogrammetryPath } from '../../logic/pathGenerator';
 import { downloadKMZ } from '../../utils/djiExporter';
 import { parseImport } from '../../utils/kmlImporter';
 import { Trash2, Undo, Redo, Download, Play, Upload, ChevronDown, ChevronUp, Settings, Camera, Map as MapIcon, Layers } from 'lucide-react';
+import * as turf from '@turf/turf';
 
 const Section = ({ title, icon: Icon, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -74,6 +75,47 @@ export default function SidebarMain({ currentPolygon }) {
     } catch (err) {
       console.error(err);
       alert("Failed to parse file. Ensure it is a valid KML/KMZ.");
+    }
+  };
+
+  // Mission statistics calculations
+  const calculateMissionDistance = (waypoints) => {
+    if (waypoints.length < 2) return 0;
+
+    let totalDistance = 0;
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const from = turf.point([waypoints[i].lng, waypoints[i].lat]);
+      const to = turf.point([waypoints[i + 1].lng, waypoints[i + 1].lat]);
+      totalDistance += turf.distance(from, to, { units: 'meters' });
+    }
+
+    return totalDistance;
+  };
+
+  const calculateMissionTime = (waypoints, speed) => {
+    if (speed === 0) return 0;
+    const distance = calculateMissionDistance(waypoints);
+    return Math.round(distance / speed);
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatDistance = (meters, units) => {
+    if (units === 'metric') {
+      if (meters >= 1000) {
+        return `${(meters / 1000).toFixed(2)} km`;
+      }
+      return `${Math.round(meters)} m`;
+    } else {
+      const feet = meters * 3.28084;
+      if (feet >= 5280) {
+        return `${(feet / 5280).toFixed(2)} mi`;
+      }
+      return `${Math.round(feet)} ft`;
     }
   };
 
@@ -405,8 +447,22 @@ export default function SidebarMain({ currentPolygon }) {
             <div className="font-bold text-gray-700">{waypoints.length}</div>
           </div>
           <div className="flex-1 bg-white border rounded p-2 text-center">
+            <div className="text-xs text-gray-400 font-bold uppercase">Distance</div>
+            <div className="font-bold text-gray-700">
+              {waypoints.length >= 2
+                ? formatDistance(calculateMissionDistance(waypoints), settings.units)
+                : settings.units === 'metric' ? '0 m' : '0 ft'
+              }
+            </div>
+          </div>
+          <div className="flex-1 bg-white border rounded p-2 text-center">
             <div className="text-xs text-gray-400 font-bold uppercase">Time</div>
-            <div className="font-bold text-gray-700">~{Math.round(waypoints.length * 2)}s</div>
+            <div className="font-bold text-gray-700">
+              {waypoints.length >= 2
+                ? formatTime(calculateMissionTime(waypoints, settings.speed))
+                : '0:00'
+              }
+            </div>
           </div>
         </div>
 
