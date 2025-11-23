@@ -84,6 +84,13 @@ export default function MapContainer({ onPolygonDrawn }) {
   // Drag State
   const draggedPoint = useRef(null); // { id, initialLngLat }
 
+  const [currentMode, setCurrentMode] = useState('simple_select');
+  const currentModeRef = useRef(currentMode);
+
+  useEffect(() => {
+    currentModeRef.current = currentMode;
+  }, [currentMode]);
+
   // Handle Reset
   useEffect(() => {
     if (resetTrigger > 0 && draw.current) {
@@ -282,7 +289,7 @@ export default function MapContainer({ onPolygonDrawn }) {
       if (e.originalEvent._isDrag) return;
 
       // Handle Add Waypoint Mode
-      if (currentMode === 'add_waypoint') {
+      if (currentModeRef.current === 'add_waypoint') {
         const { lng, lat } = e.lngLat;
         addWaypoint({ lng, lat });
         return;
@@ -514,16 +521,6 @@ export default function MapContainer({ onPolygonDrawn }) {
           'text-offset': [0, 0],
           'text-anchor': 'center',
           'text-allow-overlap': true,
-          'text-rotation-alignment': 'map', // Rotate text with icon/map so it stays upright relative to icon? No, usually text stays upright relative to viewport or map.
-          // If 'map', text rotates with the map. If 'viewport', it stays upright.
-          // If icon rotates (heading), we might want text to stay upright relative to viewport for readability?
-          // But if it's inside the icon, maybe it should rotate with the icon?
-          // User said "heading icons are pointed correct direction".
-          // Let's try 'viewport' for text so numbers are always readable, or 'map' if they want it fixed to the ground.
-          // Usually for sequence numbers inside a rotating icon, we want them to be readable (upright).
-          // But if the icon is upside down, the number will be over the "point" if we don't rotate it?
-          // Actually, if anchor is center, and text-offset is 0,0, it stays in center.
-          // Let's stick to viewport alignment for readability.
           'text-rotation-alignment': 'viewport'
         },
         paint: {
@@ -638,8 +635,6 @@ export default function MapContainer({ onPolygonDrawn }) {
       useMissionStore.getState().updateSettings({ orbitRadius: 50 });
     }
   }, []);
-
-  const [currentMode, setCurrentMode] = useState('simple_select');
 
   const handleDelete = () => {
     if (draw.current) {
