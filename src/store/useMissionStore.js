@@ -12,10 +12,22 @@ export const useMissionStore = create((set, get) => ({
   // Global Settings
   settings: {
     altitude: 60,
+    speed: 10,
+    gimbalPitch: -90,
     customFOV: 82.1,
     showFootprints: false,
     sideOverlap: 70,
     frontOverlap: 80,
+    pathType: 'grid',
+    angle: 0,
+    autoDirection: false,
+    generateEveryPoint: false,
+    reversePath: false,
+    waypointAction: 'none',
+    photoInterval: 2,
+    selectedDrone: 'dji_mini_5_pro',
+    straightenLegs: false,
+    units: 'metric',
   },
 
   // Actions
