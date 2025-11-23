@@ -235,7 +235,7 @@ export default function SidebarMain({ currentPolygon }) {
                 Grid
               </button>
               <button
-                onClick={() => updateSettings({ pathType: 'orbit' })}
+                onClick={() => updateSettings({ pathType: 'orbit', spacing: 10 })}
                 className={`flex-1 py-1 text-xs font-bold rounded-md transition-all ${settings.pathType === 'orbit' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 Orbit
@@ -243,8 +243,8 @@ export default function SidebarMain({ currentPolygon }) {
             </div>
           </div>
 
-          {/* Circle Radius - Show if Orbit Mode OR if the shape is a circle */}
-          {(settings.pathType === 'orbit' || currentPolygon?.properties?.isCircle) && (
+          {/* Circle Radius - Show ONLY if the shape is a circle AND NOT in Orbit mode (per requirements) */}
+          {(settings.pathType !== 'orbit' && currentPolygon?.properties?.isCircle) && (
             <div className="mb-3">
               <label className="text-xs font-bold text-gray-500 mb-1 block">Circle Radius (m)</label>
               <div className="flex gap-2">

@@ -23,6 +23,8 @@ export const useMissionStore = create((set, get) => ({
     waypointAction: 'none', // none, photo, record
     photoInterval: 2, // seconds
     orbitRadius: 50, // Default orbit radius
+    pathType: 'grid',
+    spacing: 10,
   },
 
   // Actions
