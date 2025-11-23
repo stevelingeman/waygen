@@ -550,7 +550,22 @@ export default function MapContainer({ onPolygonDrawn }) {
       {/* Custom Draw Controls - Moved down to avoid overlap */}
       <DrawToolbar
         currentMode={currentMode}
-        onModeChange={(mode) => draw.current?.changeMode(mode)}
+        onModeChange={(mode) => {
+          // 1. Change Mode in MapboxDraw
+          draw.current?.changeMode(mode);
+
+          // 2. Manually Update React State (Guaranteed UI Feedback)
+          setCurrentMode(mode);
+
+          // 3. Manually Handle DragPan (Guaranteed Interaction Fix)
+          if (map.current) {
+            if (mode === 'drag_circle' || mode === 'draw_rectangle') {
+              map.current.dragPan.disable();
+            } else {
+              map.current.dragPan.enable();
+            }
+          }
+        }}
       />
     </div>
   );
