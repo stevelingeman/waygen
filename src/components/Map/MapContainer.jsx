@@ -452,20 +452,27 @@ export default function MapContainer({ onPolygonDrawn }) {
       }
     });
 
+    const updateMode = (e) => {
+      setCurrentMode(e.mode);
+      if (e.mode === 'drag_circle' || e.mode === 'draw_rectangle') {
+        map.current.dragPan.disable();
+      } else {
+        map.current.dragPan.enable();
+      }
+    };
+
+    map.current.on('draw.modechange', updateMode);
+
   }, []);
 
   // Force Layout Updates (Fix for HMR/Persisted Styles)
   useEffect(() => {
     if (!map.current || !map.current.getLayer('waypoints-symbol')) return;
 
-    // Ensure text is centered and scaling is applied
     map.current.setLayoutProperty('waypoints-symbol', 'text-offset', [0, 0]);
     map.current.setLayoutProperty('waypoints-symbol', 'text-anchor', 'center');
     map.current.setLayoutProperty('waypoints-symbol', 'icon-anchor', 'center');
     map.current.setLayoutProperty('waypoints-symbol', 'text-rotation-alignment', 'viewport');
-
-    // Re-apply scaling if needed (though addLayer handles it, this is safe)
-    // map.current.setLayoutProperty('waypoints-symbol', 'icon-size', ...); 
   }, []);
 
   // Update Waypoints Source & Path
@@ -513,36 +520,16 @@ export default function MapContainer({ onPolygonDrawn }) {
 
   const [currentMode, setCurrentMode] = useState('simple_select');
 
-  useEffect(() => {
-    if (!map.current) return;
-
-    const updateMode = (e) => {
-      setCurrentMode(e.mode);
-    };
-
-    map.current.on('draw.modechange', updateMode);
-
-    return () => {
-      if (map.current) {
-        map.current.off('draw.modechange', updateMode);
-      }
-    };
-  }, []);
-
-  // Update Cursor based on Mode
-  useEffect(() => {
-    if (!map.current) return;
-    const canvas = map.current.getCanvas();
-
-    if (currentMode === 'drag_circle' || currentMode === 'draw_rectangle') {
-      canvas.style.cursor = 'crosshair';
-    } else {
-      canvas.style.cursor = '';
-    }
-  }, [currentMode]);
-
   return (
-    <div className="relative w-full h-full">
+    <div className={`relative w-full h-full ${currentMode === 'drag_circle' || currentMode === 'draw_rectangle' ? 'force-crosshair' : ''}`}>
+      <style>{`
+        .force-crosshair .mapboxgl-canvas-container {
+          cursor: crosshair !important;
+        }
+        .force-crosshair .mapboxgl-canvas {
+          cursor: crosshair !important;
+        }
+      `}</style>
       <div ref={mapContainer} className="w-full h-full" />
       {selectionBox && (
         <div
