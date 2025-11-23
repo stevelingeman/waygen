@@ -63,9 +63,11 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
 
   const { altitude, overlap, angle, gimbalPitch, autoDirection, generateEveryPoint, reversePath, speed } = settings;
   // ... (rest of existing grid logic)
-  const FOV_CONSTANT = Math.tan(41.05 * (Math.PI / 180));
-
   // 1. Calculate Line Spacing in METERS
+  // Use customFOV from settings (defaulting to 82.1 if missing)
+  const hfov = settings.customFOV || 82.1;
+  const FOV_CONSTANT = Math.tan((hfov / 2) * (Math.PI / 180));
+
   const imageWidth = (altitude * FOV_CONSTANT) * 2;
   const lineSpacingMeters = imageWidth * (1 - (overlap / 100));
 
