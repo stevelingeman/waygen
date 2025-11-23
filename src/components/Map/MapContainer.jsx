@@ -680,8 +680,13 @@ export default function MapContainer({ onPolygonDrawn }) {
       <DrawToolbar
         currentMode={currentMode}
         onModeChange={(mode) => {
-          // 1. Change Mode in MapboxDraw
-          draw.current?.changeMode(mode);
+          // 1. Change Mode in MapboxDraw (Only if it's a valid Draw mode)
+          if (mode !== 'add_waypoint') {
+            draw.current?.changeMode(mode);
+          } else {
+            // If adding waypoint, switch Draw to simple_select to avoid interference
+            draw.current?.changeMode('simple_select');
+          }
 
           // 2. Manually Update React State (Guaranteed UI Feedback)
           setCurrentMode(mode);

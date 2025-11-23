@@ -23,6 +23,33 @@ export const useMissionStore = create((set, get) => ({
     photoInterval: 2, // seconds
   },
 
+  // Actions
+  setWaypoints: (waypoints) => set((state) => ({
+    waypoints,
+    past: [...state.past, state.waypoints],
+    future: []
+  })),
+
+  addWaypoint: (waypoint) => set((state) => {
+    const newWp = {
+      id: crypto.randomUUID(),
+      ...waypoint,
+      altitude: state.settings.altitude,
+      speed: state.settings.speed,
+      gimbalPitch: state.settings.gimbalPitch,
+      heading: 0
+    };
+    return {
+      waypoints: [...state.waypoints, newWp],
+      past: [...state.past, state.waypoints],
+      future: []
+    };
+  }),
+
+  updateSettings: (newSettings) => set((state) => ({
+    settings: { ...state.settings, ...newSettings }
+  })),
+
   // Selection Logic
   selectWaypoint: (id, multi) => set((state) => ({
     selectedIds: multi
