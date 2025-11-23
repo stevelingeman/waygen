@@ -501,7 +501,7 @@ export default function MapContainer({ onPolygonDrawn }) {
           'fill-opacity': 0.3,
           'fill-outline-color': 'rgba(255,255,255,0.5)'
         }
-      }, 'waypoints-symbol'); // Place below waypoints
+      }); // Removed 'waypoints-symbol' to prevent crash as it doesn't exist yet
 
       // Add Waypoints Source
       map.current.addSource('waypoints', {
