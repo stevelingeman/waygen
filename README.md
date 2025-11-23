@@ -5,6 +5,10 @@
 ![License](https://img.shields.io/badge/license-Private-blue)
 ![Version](https://img.shields.io/badge/version-1.0.0-green)
 
+## 🌐 Live Demo
+
+**[Launch Waygen →](https://waygen.pages.dev/)**
+
 ---
 
 ## 🎯 Overview
