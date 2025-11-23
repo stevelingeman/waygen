@@ -31,7 +31,7 @@ export default function SidebarMain({ currentPolygon }) {
   const {
     waypoints, selectedIds, settings,
     setWaypoints, updateSelectedWaypoints, deleteSelectedWaypoints,
-    undo, redo, updateSettings, resetMission
+    undo, redo, updateSettings, resetMission, fitMapToWaypoints
   } = useMissionStore();
 
   const handleReset = () => {
@@ -69,6 +69,11 @@ export default function SidebarMain({ currentPolygon }) {
       if (newPoints.length > 0) {
         setWaypoints(newPoints);
         alert(`Imported ${newPoints.length} waypoints!`);
+
+        // Auto-zoom to fit all waypoints with a small delay
+        setTimeout(() => {
+          fitMapToWaypoints();
+        }, 100);
       } else {
         alert("No waypoints found in file.");
       }

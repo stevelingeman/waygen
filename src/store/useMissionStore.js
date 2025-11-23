@@ -1,9 +1,13 @@
 import { create } from 'zustand';
 import { bearing } from '@turf/turf';
+import mapboxgl from 'mapbox-gl';
 
 export const useMissionStore = create((set, get) => ({
   waypoints: [],
   selectedIds: [],
+
+  // Map Reference
+  mapRef: null,
 
   // History Stack
   past: [],
@@ -28,6 +32,7 @@ export const useMissionStore = create((set, get) => ({
     selectedDrone: 'dji_mini_5_pro',
     straightenLegs: false,
     units: 'metric',
+    orbitRadius: 50,
   },
 
   // Actions
@@ -138,6 +143,27 @@ export const useMissionStore = create((set, get) => ({
       waypoints: next,
       past: [...past, waypoints],
       future: newFuture
+    });
+  },
+
+  // Map Reference Actions
+  setMapRef: (mapRef) => set({ mapRef }),
+
+  fitMapToWaypoints: () => {
+    const { mapRef, waypoints } = get();
+    if (!mapRef || !waypoints || waypoints.length === 0) return;
+
+    // Calculate bounds for all waypoints
+    const bounds = new mapboxgl.LngLatBounds();
+    waypoints.forEach(wp => {
+      bounds.extend([wp.lng, wp.lat]);
+    });
+
+    // Fit map to bounds with padding
+    mapRef.fitBounds(bounds, {
+      padding: { top: 100, bottom: 100, left: 100, right: 450 }, // Extra padding on right for sidebar
+      maxZoom: 16,
+      duration: 1000 // Smooth animation
     });
   },
 

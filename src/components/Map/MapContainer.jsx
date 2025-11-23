@@ -80,7 +80,7 @@ export default function MapContainer({ onPolygonDrawn }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const draw = useRef(null);
-  const { waypoints, selectedIds, selectWaypoint, setSelectedIds, resetTrigger, settings, updateWaypoint, addWaypoint } = useMissionStore();
+  const { waypoints, selectedIds, selectWaypoint, setSelectedIds, resetTrigger, settings, updateWaypoint, addWaypoint, setMapRef } = useMissionStore();
 
   // Drag State
   const draggedPoint = useRef(null); // { id, initialLngLat }
@@ -180,6 +180,9 @@ export default function MapContainer({ onPolygonDrawn }) {
       collapsed: true
     });
     map.current.addControl(geocoder, 'top-right');
+
+    // Set map reference in store for auto-zoom functionality
+    setMapRef(map.current);
 
     draw.current = new MapboxDraw({
       userProperties: true,
