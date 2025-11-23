@@ -1,9 +1,10 @@
 import React from 'react';
-import { Square, Hexagon, Circle, MousePointer2, Trash2 } from 'lucide-react';
+import { Square, Hexagon, Circle, MousePointer2, Trash2, Plus } from 'lucide-react';
 
 export default function DrawToolbar({ currentMode, onModeChange, onDelete, canDelete }) {
   const tools = [
     { id: 'simple_select', icon: MousePointer2, title: 'Select (Pointer)' },
+    { id: 'add_waypoint', icon: Plus, title: 'Add Waypoint' },
     { id: 'draw_rectangle', icon: Square, title: 'Draw Square' },
     { id: 'draw_polygon', icon: Hexagon, title: 'Draw Polygon' },
     { id: 'drag_circle', icon: Circle, title: 'Draw Circle' },

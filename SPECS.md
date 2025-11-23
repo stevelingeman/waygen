@@ -1,31 +1,15 @@
-# Feature: Waypoint Drag & Drop
-**Mode:** Single Point Edit
+# Feature: Manual Waypoint Addition (Append Mode)
 **Status:** Ready for Dev
 
-## 1. UX Requirements
-*   **Interaction:** Click-and-hold on a waypoint -> Drag -> Release.
-*   **Cursor:** Change to `move` (grab hand) when hovering over a waypoint.
-*   **Selection:** If multiple points are selected, **IGNORE** the selection for the move operation. Only the specific point under the mouse cursor moves.
+## 1. Logic: Append Only
+*   **Action:** When the user clicks the map with the "Add Waypoint" tool active:
+*   **Result:** Create a new waypoint and `.push()` it to the **end** of the `waypoints` array.
+*   **Sequence:** If there are 10 points, the new point is ALWAYS #11, regardless of what is currently selected.
 
-## 2. Technical Implementation (Event Loop)
-We must use **Native Mapbox Events** on the Waypoint Layer (not Mapbox Draw).
+## 2. Interaction
+*   **Tool:** "Add Waypoint" icon in toolbar.
+*   **Cursor:** Crosshair.
+*   **Selection Behavior:** The new point should become the selected point (to highlight the tail of the path).
 
-### Step A: The Setup
-*   Define a mutable reference (or local state) to track: `draggedPointID`.
-*   Ensure the Waypoint Layer has `interactive: true`.
-
-### Step B: The Event Chain
-1.  **`mousedown` (on 'waypoint-layer'):**
-    *   Stop event propagation.
-    *   Disable `map.dragPan` (lock the camera).
-    *   Set `canvas.style.cursor = 'grabbing'`.
-    *   Capture the `feature.id` (or index) of the point.
-2.  **`mousemove` (on 'map'):**
-    *   *Condition:* Only if `draggedPointID` is set.
-    *   *Action:* Update the specific feature's coordinates in the **GeoJSON Source** directly (`source.setData(...)`).
-    *   *Constraint:* Do **NOT** update the global Store (`useMissionStore`) on every pixel move. It causes React re-render lag.
-3.  **`mouseup` (on 'map'):**
-    *   *Action:* Commit the final coordinates to `useMissionStore` (Update the "Source of Truth").
-    *   Enable `map.dragPan`.
-    *   Reset cursor to `grab` or default.
-    *   Clear `draggedPointID`.
+## 3. Data defaults
+*   **Altitude/Speed:** Inherit from global defaults.

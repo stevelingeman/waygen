@@ -79,7 +79,7 @@ export default function MapContainer({ onPolygonDrawn }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const draw = useRef(null);
-  const { waypoints, selectedIds, selectWaypoint, setSelectedIds, resetTrigger, createCircleTrigger, settings, updateWaypoint } = useMissionStore();
+  const { waypoints, selectedIds, selectWaypoint, setSelectedIds, resetTrigger, createCircleTrigger, settings, updateWaypoint, addWaypoint } = useMissionStore();
 
   // Drag State
   const draggedPoint = useRef(null); // { id, initialLngLat }
@@ -280,6 +280,14 @@ export default function MapContainer({ onPolygonDrawn }) {
 
     map.current.on('click', (e) => {
       if (e.originalEvent._isDrag) return;
+
+      // Handle Add Waypoint Mode
+      if (currentMode === 'add_waypoint') {
+        const { lng, lat } = e.lngLat;
+        addWaypoint({ lng, lat });
+        return;
+      }
+
       const features = map.current.queryRenderedFeatures(e.point, { layers: ['waypoints-symbol'] });
 
       if (features.length) {
@@ -642,7 +650,7 @@ export default function MapContainer({ onPolygonDrawn }) {
   };
 
   return (
-    <div className={`relative w-full h-full ${currentMode === 'drag_circle' || currentMode === 'draw_rectangle' ? 'force-crosshair' : ''}`}>
+    <div className={`relative w-full h-full ${currentMode === 'drag_circle' || currentMode === 'draw_rectangle' || currentMode === 'add_waypoint' ? 'force-crosshair' : ''}`}>
       <style>{`
         .force-crosshair .mapboxgl-canvas-container {
           cursor: crosshair !important;
