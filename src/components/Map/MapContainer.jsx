@@ -106,6 +106,7 @@ export default function MapContainer({ onPolygonDrawn }) {
   }, [createCircleTrigger, onPolygonDrawn, settings.orbitRadius]);
 
   const [selectionBox, setSelectionBox] = useState(null);
+  const [canDelete, setCanDelete] = useState(false);
   const startPointRef = useRef(null);
 
   // Handle Radius Change from Store (Two-way binding)
@@ -265,8 +266,10 @@ export default function MapContainer({ onPolygonDrawn }) {
       if (e.features.length > 0) {
         updateRadiusFromFeature(e.features[0]);
         onPolygonDrawn(e.features[0]);
+        setCanDelete(true);
       } else {
         onPolygonDrawn(null);
+        setCanDelete(false);
       }
     });
 
@@ -520,6 +523,14 @@ export default function MapContainer({ onPolygonDrawn }) {
 
   const [currentMode, setCurrentMode] = useState('simple_select');
 
+  const handleDelete = () => {
+    if (draw.current) {
+      draw.current.trash();
+      onPolygonDrawn(null);
+      setCanDelete(false);
+    }
+  };
+
   return (
     <div className={`relative w-full h-full ${currentMode === 'drag_circle' || currentMode === 'draw_rectangle' ? 'force-crosshair' : ''}`}>
       <style>{`
@@ -566,6 +577,8 @@ export default function MapContainer({ onPolygonDrawn }) {
             }
           }
         }}
+        onDelete={handleDelete}
+        canDelete={canDelete}
       />
     </div>
   );

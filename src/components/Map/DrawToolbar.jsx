@@ -1,7 +1,7 @@
 import React from 'react';
-import { Square, Hexagon, Circle, MousePointer2 } from 'lucide-react';
+import { Square, Hexagon, Circle, MousePointer2, Trash2 } from 'lucide-react';
 
-export default function DrawToolbar({ currentMode, onModeChange }) {
+export default function DrawToolbar({ currentMode, onModeChange, onDelete, canDelete }) {
   const tools = [
     { id: 'simple_select', icon: MousePointer2, title: 'Select (Pointer)' },
     { id: 'draw_rectangle', icon: Square, title: 'Draw Square' },
@@ -30,6 +30,20 @@ export default function DrawToolbar({ currentMode, onModeChange }) {
           </button>
         );
       })}
+
+      <div className="h-px bg-gray-200 my-1" />
+
+      <button
+        onClick={onDelete}
+        disabled={!canDelete}
+        className={`p-2 rounded flex items-center justify-center ${canDelete
+          ? 'text-red-600 hover:bg-red-50 cursor-pointer'
+          : 'text-gray-300 cursor-not-allowed'
+          }`}
+        title="Delete Selected"
+      >
+        <Trash2 size={20} />
+      </button>
     </div>
   );
 }
