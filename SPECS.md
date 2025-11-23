@@ -1,5 +1,5 @@
 # Feature: Camera Footprint Visualization
-**Status:** [NEW]
+**Status:** [IMPLEMENTED]
 
 ## 1. Drone Database (Hardcoded Specs)
 The dropdown must contain these exact models. Default to **DJI Mini 5 Pro**.
@@ -48,7 +48,7 @@ The single "Overlap" slider must be split into two distinct controls to allow fo
         *   **Range:** 0% to 90%
         *   **Default:** 70%
 # Feature: Camera Footprint Visualization
-**Status:** [NEW]
+**Status:** [IMPLEMENTED]
 
 ## 1. Drone Database (Hardcoded Specs)
 The dropdown must contain these exact models. Default to **DJI Mini 5 Pro**.
@@ -86,7 +86,7 @@ For each waypoint, calculate the 4 corners of the image projection on the ground
 *   **Toggle:** Add "Show Footprints" checkbox. Default to **OFF** (performance).
 
 ## 5. Overlap Settings (Split Control)
-**Status:** [PENDING IMPLEMENTATION]
+**Status:** [IMPLEMENTED]
 
 The single "Overlap" slider must be split into two distinct controls to allow for professional photogrammetry workflows (e.g., 70% Side / 80% Front).
 
@@ -116,3 +116,21 @@ The single "Overlap" slider must be split into two distinct controls to allow fo
     *   Remove `overlap` (or migrate it).
     *   Add `sideOverlap` (Number, default 70).
     *   Add `frontOverlap` (Number, default 80).
+
+## 6. Sidebar UI Refinements
+**Status:** [PENDING IMPLEMENTATION]
+
+The sidebar menu requires restructuring to improve usability and logical grouping.
+
+### 6.1 "Basics" Section
+*   **Move:** "Drone Model (FOV)" dropdown from "Camera" to "Basics".
+    *   *Reason:* Drone selection is a fundamental setting that affects path generation geometry.
+
+### 6.2 "Camera" Section
+*   **Remove:** "Photo Interval (s)" input.
+    *   *Reason:* When "Take Photo" is selected, the interval is determined spatially by the **Front Overlap** setting (distance between waypoints), not by time.
+    *   *Action:* Remove the conditional input that appears when `waypointAction === 'photo'`.
+
+### 6.3 "Advanced" Section
+*   **Move:** "Show Footprints" checkbox from "Camera" to "Advanced".
+    *   *Reason:* This is a visualization aid, not a core camera setting.
