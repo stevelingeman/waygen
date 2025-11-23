@@ -10,7 +10,7 @@ export default function DrawToolbar({ currentMode, onModeChange }) {
   ];
 
   return (
-    <div className="absolute top-32 left-4 flex flex-col gap-2 bg-white rounded-md shadow-md p-1 z-10">
+    <div className="absolute top-4 left-4 flex flex-col gap-2 bg-white rounded-md shadow-md p-1 z-10">
       {tools.map((tool) => {
         const Icon = tool.icon;
         const isActive = currentMode === tool.id || (tool.id === 'simple_select' && currentMode === 'direct_select');
