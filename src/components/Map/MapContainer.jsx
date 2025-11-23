@@ -79,7 +79,10 @@ export default function MapContainer({ onPolygonDrawn }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const draw = useRef(null);
-  const { waypoints, selectedIds, selectWaypoint, setSelectedIds, resetTrigger, createCircleTrigger, settings } = useMissionStore();
+  const { waypoints, selectedIds, selectWaypoint, setSelectedIds, resetTrigger, createCircleTrigger, settings, updateWaypoint } = useMissionStore();
+
+  // Drag State
+  const draggedPoint = useRef(null); // { id, initialLngLat }
 
   // Handle Reset
   useEffect(() => {
@@ -338,6 +341,113 @@ export default function MapContainer({ onPolygonDrawn }) {
         map.current.on('mouseup', onMouseUp);
       }
     });
+
+    // --- Waypoint Drag & Drop Logic ---
+
+    const onPointMouseEnter = () => {
+      if (!draggedPoint.current) {
+        map.current.getCanvas().style.cursor = 'move';
+      }
+    };
+
+    const onPointMouseLeave = () => {
+      if (!draggedPoint.current) {
+        map.current.getCanvas().style.cursor = '';
+      }
+    };
+
+    const onPointMouseDown = (e) => {
+      // Prevent drag if we are in a drawing mode or holding shift (selection)
+      if (draw.current.getMode() !== 'simple_select' && draw.current.getMode() !== 'direct_select') return;
+      if (e.originalEvent.shiftKey) return;
+
+      e.preventDefault();
+
+      const feature = e.features[0];
+      if (!feature) return;
+
+      map.current.dragPan.disable();
+      map.current.getCanvas().style.cursor = 'grabbing';
+
+      draggedPoint.current = {
+        id: feature.properties.id,
+        initialLngLat: feature.geometry.coordinates
+      };
+
+      map.current.on('mousemove', onPointDragMove);
+      map.current.on('mouseup', onPointDragUp);
+    };
+
+    const onPointDragMove = (e) => {
+      if (!draggedPoint.current) return;
+
+      const { lng, lat } = e.lngLat;
+
+      // Update the specific feature in the source directly for performance
+      const wpSource = map.current.getSource('waypoints');
+      const pathSource = map.current.getSource('mission-path');
+
+      // We need to construct a new FeatureCollection based on current store state + the moving point
+      // Accessing store state directly here to avoid stale closures if we used 'waypoints' prop
+      const currentWaypoints = useMissionStore.getState().waypoints;
+      const currentSelectedIds = useMissionStore.getState().selectedIds;
+
+      const newFeatures = currentWaypoints.map((wp, index) => {
+        const isDragging = wp.id === draggedPoint.current.id;
+        return {
+          type: 'Feature',
+          properties: {
+            id: wp.id,
+            index: index + 1,
+            selected: currentSelectedIds.includes(wp.id),
+            heading: wp.heading || 0
+          },
+          geometry: {
+            type: 'Point',
+            coordinates: isDragging ? [lng, lat] : [wp.lng, wp.lat]
+          }
+        };
+      });
+
+      if (wpSource) {
+        wpSource.setData({ type: 'FeatureCollection', features: newFeatures });
+      }
+
+      // Also update the path line
+      if (pathSource) {
+        const lineCoords = newFeatures.map(f => f.geometry.coordinates);
+        pathSource.setData({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: lineCoords }
+        });
+      }
+    };
+
+    const onPointDragUp = (e) => {
+      if (!draggedPoint.current) return;
+
+      const { lng, lat } = e.lngLat;
+      const { id } = draggedPoint.current;
+
+      // Commit to store
+      useMissionStore.getState().updateWaypoint(id, { lng, lat });
+
+      // Cleanup
+      draggedPoint.current = null;
+      map.current.dragPan.enable();
+      map.current.getCanvas().style.cursor = '';
+
+      // Prevent click event from triggering selection
+      e.originalEvent._isDrag = true;
+
+      map.current.off('mousemove', onPointDragMove);
+      map.current.off('mouseup', onPointDragUp);
+    };
+
+    // Attach listeners to the symbol layer
+    map.current.on('mouseenter', 'waypoints-symbol', onPointMouseEnter);
+    map.current.on('mouseleave', 'waypoints-symbol', onPointMouseLeave);
+    map.current.on('mousedown', 'waypoints-symbol', onPointMouseDown);
 
     map.current.on('load', () => {
       // Add Mission Path Source

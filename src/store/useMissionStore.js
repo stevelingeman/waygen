@@ -65,6 +65,18 @@ export const useMissionStore = create((set, get) => ({
     });
   },
 
+  updateWaypoint: (id, updates) => {
+    const { waypoints, past } = get();
+    const newWaypoints = waypoints.map(wp =>
+      wp.id === id ? { ...wp, ...updates } : wp
+    );
+    set({
+      waypoints: newWaypoints,
+      past: [...past, waypoints],
+      future: []
+    });
+  },
+
   deleteSelectedWaypoints: () => {
     const { waypoints, selectedIds, past } = get();
     const newWaypoints = waypoints.filter(wp => !selectedIds.includes(wp.id));
