@@ -161,9 +161,9 @@ export const useMissionStore = create((set, get) => ({
 
     // Fit map to bounds with padding
     mapRef.fitBounds(bounds, {
-      padding: { top: 100, bottom: 100, left: 100, right: 450 }, // Extra padding on right for sidebar
+      padding: { top: 100, bottom: 100, left: 200, right: 350 }, // Shifted right - more left padding, less right padding
       maxZoom: 16,
-      duration: 1000 // Smooth animation
+      duration: 3000 // 3-second smooth animation
     });
   },
 
