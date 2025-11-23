@@ -483,25 +483,33 @@ export default function MapContainer({ onPolygonDrawn }) {
         data: { type: 'FeatureCollection', features: [] }
       });
 
-      // Add Footprints Layer
+      // Add Footprints Layer (Fill)
       map.current.addLayer({
         id: 'footprints-fill',
         type: 'fill',
         source: 'footprints',
         paint: {
-          'fill-color': [
-            'match',
-            ['%', ['get', 'index'], 4],
-            0, '#FF5733', // Red-Orange
-            1, '#33FF57', // Green
-            2, '#3357FF', // Blue
-            3, '#F333FF', // Magenta
-            '#888888' // Fallback
-          ],
-          'fill-opacity': 0.3,
-          'fill-outline-color': 'rgba(255,255,255,0.5)'
+          'fill-color': '#00a1e4', // Static Cyan
+          'fill-opacity': 0.15, // Low opacity for alpha stacking
+          'fill-outline-color': 'rgba(0,0,0,0)' // No outline on fill
         }
-      }); // Removed 'waypoints-symbol' to prevent crash as it doesn't exist yet
+      });
+
+      // Add Footprints Layer (Outline)
+      map.current.addLayer({
+        id: 'footprints-outline',
+        type: 'line',
+        source: 'footprints',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#00a1e4',
+          'line-width': 1,
+          'line-opacity': 0.6
+        }
+      });
 
       // Add Waypoints Source
       map.current.addSource('waypoints', {

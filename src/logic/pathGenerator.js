@@ -149,14 +149,35 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
       const start = turf.point(coords[0]);
       const end = turf.point(coords[1]);
       const dist = turf.distance(start, end, { units: 'meters' });
-      const numPoints = Math.floor(dist / 10); // Point every 10m
-      if (numPoints > 1) {
+
+      // Calculate Front Spacing based on Overlap
+      // Height_ground = (2 * Altitude * tan(HFOV / 2)) * (3 / 4)
+      // Interval = Height_ground * (1 - (OverlapPercentage / 100))
+      const groundHeight = imageWidth * (3 / 4);
+      const frontSpacingMeters = groundHeight * (1 - (overlap / 100));
+
+      // Ensure we don't have infinite points if spacing is 0 (shouldn't happen with valid inputs)
+      const safeSpacing = Math.max(1, frontSpacingMeters);
+
+      const numPoints = Math.floor(dist / safeSpacing);
+
+      if (numPoints >= 1) {
         const line = turf.lineString(coords);
         const newCoords = [];
         for (let i = 0; i <= numPoints; i++) {
-          const pt = turf.along(line, (i / numPoints) * turf.length(line, { units: 'meters' }), { units: 'meters' });
-          newCoords.push(pt.geometry.coordinates);
+          const pt = turf.along(line, (i * safeSpacing) / 1000, { units: 'kilometers' }); // turf.along uses km by default or takes units
+          // Actually turf.along takes (line, distance, options). Distance unit defaults to km.
+          // Let's be explicit.
+          const ptMeters = turf.along(line, i * safeSpacing, { units: 'meters' });
+          newCoords.push(ptMeters.geometry.coordinates);
         }
+        // Ensure the last point is included if it's significantly far from the last interpolated point
+        // Or just rely on the loop. The loop goes up to numPoints * spacing. 
+        // If dist is 100 and spacing is 30: 0, 30, 60, 90. 
+        // The end point is at 100. We might want to add it if it's not covered.
+        // Standard photogrammetry usually wants consistent spacing. 
+        // Let's stick to the calculated intervals.
+
         coords = newCoords;
       }
     }
