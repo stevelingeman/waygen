@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { bearing } from '@turf/turf';
 
 export const useMissionStore = create((set, get) => ({
   waypoints: [],
@@ -21,6 +22,7 @@ export const useMissionStore = create((set, get) => ({
     generateEveryPoint: false,
     waypointAction: 'none', // none, photo, record
     photoInterval: 2, // seconds
+    orbitRadius: 50, // Default orbit radius
   },
 
   // Actions
@@ -39,8 +41,21 @@ export const useMissionStore = create((set, get) => ({
       gimbalPitch: state.settings.gimbalPitch,
       heading: 0
     };
+
+    const updatedWaypoints = [...state.waypoints];
+    if (updatedWaypoints.length > 0) {
+      const lastIndex = updatedWaypoints.length - 1;
+      const lastWp = updatedWaypoints[lastIndex];
+      // Calculate bearing from last waypoint to new waypoint
+      const newHeading = bearing(
+        [lastWp.lng, lastWp.lat],
+        [newWp.lng, newWp.lat]
+      );
+      updatedWaypoints[lastIndex] = { ...lastWp, heading: newHeading };
+    }
+
     return {
-      waypoints: [...state.waypoints, newWp],
+      waypoints: [...updatedWaypoints, newWp],
       past: [...state.past, state.waypoints],
       future: []
     };
