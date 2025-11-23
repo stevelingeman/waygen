@@ -9,6 +9,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import { useMissionStore } from '../../store/useMissionStore';
 import DragRectangleMode from '../../logic/DragRectangleMode';
+import DrawToolbar from './DrawToolbar';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -548,45 +549,10 @@ export default function MapContainer({ onPolygonDrawn }) {
       )}
 
       {/* Custom Draw Controls - Moved down to avoid overlap */}
-      <div className="absolute top-32 left-4 flex flex-col gap-2 bg-white rounded-md shadow-md p-1">
-        <button
-          onClick={() => draw.current.changeMode('simple_select')}
-          className={`p-2 rounded hover:bg-gray-100 flex items-center justify-center ${currentMode === 'simple_select' || currentMode === 'direct_select' ? 'text-blue-600 bg-blue-50' : 'text-gray-700'}`}
-          title="Select (Pointer)"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
-            <path d="M13 13l6 6" />
-          </svg>
-        </button>
-        <button
-          onClick={() => draw.current.changeMode('draw_rectangle')}
-          className={`p-2 rounded hover:bg-gray-100 flex items-center justify-center ${currentMode === 'draw_rectangle' ? 'text-blue-600 bg-blue-50' : 'text-gray-700'}`}
-          title="Draw Square"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          </svg>
-        </button>
-        <button
-          onClick={() => draw.current.changeMode('draw_polygon')}
-          className={`p-2 rounded hover:bg-gray-100 flex items-center justify-center ${currentMode === 'draw_polygon' ? 'text-blue-600 bg-blue-50' : 'text-gray-700'}`}
-          title="Draw Polygon"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2l-8.5 6 3 10 11 0 3-10-8.5-6z" />
-          </svg>
-        </button>
-        <button
-          onClick={() => draw.current.changeMode('drag_circle')}
-          className={`p-2 rounded hover:bg-gray-100 flex items-center justify-center ${currentMode === 'drag_circle' ? 'text-blue-600 bg-blue-50' : 'text-gray-700'}`}
-          title="Draw Circle"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-          </svg>
-        </button>
-      </div>
+      <DrawToolbar
+        currentMode={currentMode}
+        onModeChange={(mode) => draw.current?.changeMode(mode)}
+      />
     </div>
   );
 }
