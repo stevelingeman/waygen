@@ -410,7 +410,18 @@ export default function SidebarMain({ currentPolygon }) {
 
         <Section title="Advanced" icon={Layers} defaultOpen={true}>
           <div className="flex items-center justify-between">
-            <label className="text-sm text-gray-700">Show Footprints</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-700">Show Footprints</label>
+              {settings.showFootprints && (
+                <input
+                  type="color"
+                  value={settings.footprintColor}
+                  onChange={e => updateSettings({ footprintColor: e.target.value })}
+                  className="w-4 h-4 rounded border border-gray-300 cursor-pointer"
+                  title="Choose footprint color"
+                />
+              )}
+            </div>
             <input
               type="checkbox"
               checked={settings.showFootprints}
@@ -418,19 +429,6 @@ export default function SidebarMain({ currentPolygon }) {
               className="accent-blue-600 w-4 h-4"
             />
           </div>
-
-          {settings.showFootprints && (
-            <div className="mt-2 flex items-center justify-between">
-              <label className="text-xs text-gray-600">Footprint Color</label>
-              <input
-                type="color"
-                value={settings.footprintColor}
-                onChange={e => updateSettings({ footprintColor: e.target.value })}
-                className="w-12 h-8 rounded border border-gray-300 cursor-pointer"
-                title="Choose footprint color"
-              />
-            </div>
-          )}
           <div className="flex items-center justify-between mt-3">
             <label className="text-sm text-gray-700">Straighten Legs</label>
             <input
@@ -461,7 +459,7 @@ export default function SidebarMain({ currentPolygon }) {
 
         <div className="flex gap-2">
           <div className="flex-1 bg-white border rounded p-2 text-center">
-            <div className="text-xs text-gray-400 font-bold uppercase">Waypoints</div>
+            <div className="text-xs  text-gray-400 font-bold uppercase">Waypoints</div>
             <div className="font-bold text-gray-700">{waypoints.length}</div>
           </div>
           <div className="flex-1 bg-white border rounded p-2 text-center">
