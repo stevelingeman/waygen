@@ -492,7 +492,7 @@ export default function MapContainer({ onPolygonDrawn }) {
         type: 'fill',
         source: 'footprints',
         paint: {
-          'fill-color': '#00a1e4', // Static Cyan
+          'fill-color': '#22c55e', // Green
           'fill-opacity': 0.15, // Low opacity for alpha stacking
           'fill-outline-color': 'rgba(0,0,0,0)' // No outline on fill
         }
@@ -508,7 +508,7 @@ export default function MapContainer({ onPolygonDrawn }) {
           'line-cap': 'round'
         },
         paint: {
-          'line-color': '#00a1e4',
+          'line-color': '#22c55e',
           'line-width': 1,
           'line-opacity': 0.6
         }
