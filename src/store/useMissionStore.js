@@ -20,6 +20,7 @@ export const useMissionStore = create((set, get) => ({
     gimbalPitch: -90,
     customFOV: 82.1,
     showFootprints: false,
+    footprintColor: '#22c55e',
     sideOverlap: 70,
     frontOverlap: 80,
     pathType: 'grid',

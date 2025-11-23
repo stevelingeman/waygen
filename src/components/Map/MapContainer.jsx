@@ -492,7 +492,7 @@ export default function MapContainer({ onPolygonDrawn }) {
         type: 'fill',
         source: 'footprints',
         paint: {
-          'fill-color': '#22c55e', // Green
+          'fill-color': ['get', 'color', ['literal', settings.footprintColor]], // Dynamic color from settings
           'fill-opacity': 0.15, // Low opacity for alpha stacking
           'fill-outline-color': 'rgba(0,0,0,0)' // No outline on fill
         }
@@ -508,7 +508,7 @@ export default function MapContainer({ onPolygonDrawn }) {
           'line-cap': 'round'
         },
         paint: {
-          'line-color': '#22c55e',
+          'line-color': ['get', 'color', ['literal', settings.footprintColor]], // Dynamic color from settings
           'line-width': 1,
           'line-opacity': 0.6
         }
@@ -688,14 +688,15 @@ export default function MapContainer({ onPolygonDrawn }) {
           settings.customFOV
         ),
         properties: {
-          index: index + 1
+          index: index + 1,
+          color: settings.footprintColor // Add color property for dynamic styling
         }
       };
     }).filter(f => f !== null);
 
     map.current.getSource('footprints').setData({ type: 'FeatureCollection', features });
 
-  }, [waypoints, settings.showFootprints, settings.altitude, settings.customFOV]);
+  }, [waypoints, settings.showFootprints, settings.altitude, settings.customFOV, settings.footprintColor]);
 
   // Ensure default radius is reasonable on load
   useEffect(() => {

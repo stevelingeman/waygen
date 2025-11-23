@@ -418,6 +418,19 @@ export default function SidebarMain({ currentPolygon }) {
               className="accent-blue-600 w-4 h-4"
             />
           </div>
+
+          {settings.showFootprints && (
+            <div className="mt-2 flex items-center justify-between">
+              <label className="text-xs text-gray-600">Footprint Color</label>
+              <input
+                type="color"
+                value={settings.footprintColor}
+                onChange={e => updateSettings({ footprintColor: e.target.value })}
+                className="w-12 h-8 rounded border border-gray-300 cursor-pointer"
+                title="Choose footprint color"
+              />
+            </div>
+          )}
           <div className="flex items-center justify-between mt-3">
             <label className="text-sm text-gray-700">Straighten Legs</label>
             <input
