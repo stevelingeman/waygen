@@ -20,6 +20,11 @@ const DragRectangleMode = {
             trash: true
         });
 
+        // Disable map dragPan so we can drag to draw
+        if (this.map && this.map.dragPan) {
+            this.map.dragPan.disable();
+        }
+
         return {
             polygon,
             startPoint: null
@@ -32,6 +37,11 @@ const DragRectangleMode = {
         this.setActionableState({
             trash: true
         });
+
+        // Re-enable map dragPan
+        if (this.map && this.map.dragPan) {
+            this.map.dragPan.enable();
+        }
     },
 
     onMouseDown: function (state, e) {

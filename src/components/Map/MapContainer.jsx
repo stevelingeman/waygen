@@ -529,6 +529,18 @@ export default function MapContainer({ onPolygonDrawn }) {
     };
   }, []);
 
+  // Update Cursor based on Mode
+  useEffect(() => {
+    if (!map.current) return;
+    const canvas = map.current.getCanvas();
+
+    if (currentMode === 'drag_circle' || currentMode === 'draw_rectangle') {
+      canvas.style.cursor = 'crosshair';
+    } else {
+      canvas.style.cursor = '';
+    }
+  }, [currentMode]);
+
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
