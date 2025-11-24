@@ -38,6 +38,7 @@ export const downloadKMZ = async (waypoints, settings, missionName = "MiniMissio
     const effectiveStraightenLegs = wp.straightenLegs !== undefined ? wp.straightenLegs : straightenLegs;
     const effectiveAction = wp.action !== undefined ? wp.action : waypointAction;
     const effectiveGimbalPitch = wp.gimbalPitch !== undefined ? wp.gimbalPitch : gimbalPitch;
+    const effectiveSpeed = wp.speed !== undefined ? wp.speed : speed;
 
     // Action Generation Logic
     let actions = "";
@@ -150,7 +151,7 @@ export const downloadKMZ = async (waypoints, settings, missionName = "MiniMissio
       <Point><coordinates>${wp.lng},${wp.lat},0</coordinates></Point>
       <wpml:index>${i}</wpml:index>
       <wpml:executeHeight>${wp.altitude}</wpml:executeHeight>
-      <wpml:waypointSpeed>${wp.speed}</wpml:waypointSpeed>
+      <wpml:waypointSpeed>${effectiveSpeed}</wpml:waypointSpeed>
       <wpml:waypointHeadingParam>
         <wpml:waypointHeadingMode>smoothTransition</wpml:waypointHeadingMode>
         <wpml:waypointHeadingAngle>${wp.heading}</wpml:waypointHeadingAngle>

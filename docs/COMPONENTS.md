@@ -21,144 +21,40 @@ This guide provides detailed documentation for each component in the Waygen appl
 
 **Key State:**
 ```javascript
-const [isDragging, setIsDragging] = useState(false);
-const [draggedWaypointId, setDraggedWaypointId] = useState(null);
-const [currentMode, setCurrentMode] = useState(null);
-const [hasSelection, setHasSelection] = useState(false);
-const mapRef = useRef(null);
-const mapInstanceRef = useRef(null);
-const drawRef = useRef(null);
+const [currentMode, setCurrentMode] = useState('simple_select');
+const [selectionBox, setSelectionBox] = useState(null);
+const [canDelete, setCanDelete] = useState(false);
+const map = useRef(null);
+const draw = useRef(null);
+const draggedPoint = useRef(null);
 ```
 
 **Store Subscriptions:**
 ```javascript
 const waypoints = useMissionStore(state => state.waypoints);
-const settings = useMissionStore(state => state.settings);
 const selectedIds = useMissionStore(state => state.selectedIds);
+const settings = useMissionStore(state => state.settings);
 const resetTrigger = useMissionStore(state => state.resetTrigger);
 ```
 
 **Mapbox Layers:**
 
-1. **waypoints** (Source)
-   - Type: GeoJSON
-   - Data: Point features for each waypoint
+1. **mission-path** (Source + Layer)
+   - Type: LineString
+   - Style: Blue line connecting waypoints
 
-2. **waypoint-markers** (Layer)
-   - Type: Symbol
-   - Icon: Custom red arrow marker
-   - Size: Scales based on zoom
+2. **footprints** (Source)
+   - **footprints-fill** (Layer): Fill with low opacity (alpha stacking)
+   - **footprints-outline** (Layer): Solid outline
 
-3. **waypoint-labels** (Layer)
-   - Type: Symbol
-   - Text: Sequential waypoint numbers (1, 2, 3...)
+3. **waypoints** (Source)
+   - **waypoints-symbol** (Layer): Teardrop icons (Blue = Normal, Red = Selected)
 
-4. **selected-waypoints** (Layer)
-   - Type: Circle
-   - Color: Bright yellow
-   - Size: Larger than unselected waypoints
-
-5. **footprints** (Source + Layer)
-   - Type: GeoJSON Polygon
-   - Fill: 4-color rotation with 30% opacity
-   - Stroke: 2px border
-   - Conditional: Only visible when `settings.showFootprints === true`
-
-**Event Handlers:**
-
-| Event | Handler | Description |
-|-------|---------|-------------|
-| `map.onClick` | Map click handler | Add waypoint when in "add" mode |
-| `map.onMouseDown` (waypoint layer) | `onPointMouseDown` | Start waypoint drag |
-| `map.onMouseMove` | `onPointDragMove` | Update waypoint position during drag |
-| `map.onMouseUp` | `onPointDragUp` | Commit waypoint position change |
-| `map.onMouseEnter` (waypoint layer) | `onPointMouseEnter` | Change cursor to pointer |
-| `map.onMouseLeave` (waypoint layer) | `onPointMouseLeave` | Reset cursor |
-| `draw.onModeChange` | `updateMode` | Update current mode state |
-| `draw.onCreate` | Shape creation handler | Update polygon state |
-| `draw.onUpdate` | Shape update handler | Update polygon state |
-| `draw.onDelete` | Shape deletion handler | Clear polygon state |
-| `draw.onSelectionChange` | Selection handler | Update selection state |
-
-**Key Functions:**
-
-#### `updateRadiusFromFeature(feature)`
-Extracts circle radius from MapboxDraw circle feature and updates store settings.
-
-```javascript
-const updateRadiusFromFeature = (feature) => {
-  if (feature.properties?.isCircle) {
-    const center = feature.properties.center;
-    const radiusInKm = feature.properties.radiusInKm;
-    updateSettings({ circleRadius: radiusInKm * 1000 });
-  }
-};
-```
-
-#### `onPointMouseDown(e)`
-Initiates waypoint drag operation.
-
-```javascript
-const onPointMouseDown = (e) => {
-  e.preventDefault();
-  const feature = e.features[0];
-  const id = feature.properties.id;
-  
-  setIsDragging(true);
-  setDraggedWaypointId(id);
-  map.getCanvas().style.cursor = 'grabbing';
-};
-```
-
-#### `onPointDragMove(e)`
-Updates waypoint position in real-time during drag.
-
-```javascript
-const onPointDragMove = (e) => {
-  if (!isDragging || !draggedWaypointId) return;
-  
-  const { lng, lat } = e.lngLat;
-  
-  // Update map source directly (fast rendering)
-  const source = map.getSource('waypoints');
-  const data = source._data;
-  const feature = data.features.find(f => f.properties.id === draggedWaypointId);
-  
-  if (feature) {
-    feature.geometry.coordinates = [lng, lat];
-    source.setData(data);
-  }
-};
-```
-
-#### `onPointDragUp(e)`
-Commits waypoint position change to store.
-
-```javascript
-const onPointDragUp = (e) => {
-  if (!isDragging || !draggedWaypointId) return;
-  
-  const { lng, lat } = e.lngLat;
-  
-  // Update store (persistent)
-  updateWaypoint(draggedWaypointId, { lat, lng });
-  
-  setIsDragging(false);
-  setDraggedWaypointId(null);
-  map.getCanvas().style.cursor = '';
-};
-```
-
-**Usage:**
-```jsx
-import MapContainer from './components/Map/MapContainer';
-
-function App() {
-  const [polygon, setPolygon] = useState(null);
-  
-  return <MapContainer onPolygonDrawn={setPolygon} />;
-}
-```
+**Key Features:**
+- **Drag & Drop**: Hold `Alt` key to drag waypoints.
+- **Box Selection**: Hold `Shift` key and drag to select multiple waypoints.
+- **Add Waypoint**: Click map to add waypoint (when in 'add_waypoint' mode).
+- **Custom Draw Modes**: Rectangle, Circle (with auto-resize if > 500m).
 
 ---
 
@@ -171,59 +67,20 @@ function App() {
 **Props:**
 ```typescript
 {
-  draw: MapboxDraw;    // MapboxDraw instance
-  mapRef: React.RefObject<mapboxgl.Map>;
+  currentMode: string;
+  onModeChange: (mode: string) => void;
+  onDelete: () => void;
+  canDelete: boolean;
 }
 ```
 
-**State:**
-```javascript
-const [activeMode, setActiveMode] = useState(null);
-const [hasSelection, setHasSelection] = useState(false);
-```
-
-**Toolbar Buttons:**
-
-| Icon | Mode | Action |
-|------|------|--------|
-| Mouse Pointer | `simple_select` | Select/modify shapes |
-| Square | `draw_rectangle` | Draw rectangles |
-| Pentagon | `draw_polygon` | Draw polygons |
-| Circle | `drag_circle` | Draw circles |
-| Trash | N/A | Delete selected shapes |
-
-**Event Listeners:**
-```javascript
-draw.on('draw.selectionchange', (e) => {
-  setHasSelection(e.features.length > 0);
-});
-
-draw.on('draw.modechange', (e) => {
-  setActiveMode(e.mode);
-});
-```
-
-**Button States:**
-- Active mode button: Blue background
-- Inactive buttons: Gray background
-- Trash button: Only enabled when shapes are selected
-
-**Usage:**
-```jsx
-import DrawToolbar from './components/Map/DrawToolbar';
-
-function MapContainer() {
-  const mapRef = useRef();
-  const drawRef = useRef();
-  
-  return (
-    <>
-      <DrawToolbar draw={drawRef.current} mapRef={mapRef} />
-      <div ref={mapRef} />
-    </>
-  );
-}
-```
+**Tools:**
+- **Select (Pointer)**: `simple_select`
+- **Add Waypoint**: `add_waypoint` (Custom mode)
+- **Draw Square**: `draw_rectangle`
+- **Draw Polygon**: `draw_polygon`
+- **Draw Circle**: `drag_circle`
+- **Trash**: Delete selected shapes
 
 ---
 
@@ -242,199 +99,104 @@ function MapContainer() {
 }
 ```
 
-**Store Subscriptions:**
-```javascript
-const waypoints = useMissionStore(state => state.waypoints);
-const selectedIds = useMissionStore(state => state.selectedIds);
-const settings = useMissionStore(state => state.settings);
-const past = useMissionStore(state => state.past);
-const future = useMissionStore(state => state.future);
+**Sub-Components:**
+- `EditSelectedPanel`: Rendered when `selectedIds.length > 0`.
+- `DownloadDialog`: Modal for exporting missions.
+- `FlightWarningDialog`: Modal for flight duration warnings.
 
-const {
-  updateSettings,
-  updateSelectedWaypoints,
-  deleteSelectedWaypoints,
-  resetMission,
-  undo,
-  redo
-} = useMissionStore();
-```
+**Key Sections:**
+1. **Header**: Mission name, Undo/Redo, Reset.
+2. **Import**: KML/KMZ upload.
+3. **Basics**: Altitude, Speed, Drone Model, Units.
+4. **Coverage**: Path Type (Grid/Orbit), Overlap, Angle.
+5. **Camera**: Gimbal Pitch, Action, Footprints.
+6. **Footer**: Generate button, Mission Stats (Waypoints, Distance, Max Speed, Est. Time), Download button.
 
-**Sections:**
+**Key Logic:**
+- **Path Generation**: Calls `generatePhotogrammetryPath` or `generateOrbitPath`.
+- **Metrics**: Calls `calculateMissionMetrics` after generation.
+- **Flight Warning**: Triggers `FlightWarningDialog` if mission time exceeds drone limits.
 
-#### **Action Bar**
-Top toolbar with quick actions.
+---
 
-**Buttons:**
-- **Undo** - Revert last change (disabled if `past.length === 0`)
-- **Redo** - Restore next change (disabled if `future.length === 0`)
-- **Download KMZ** - Export mission (disabled if `waypoints.length === 0`)
-- **Upload KML/KMZ** - Import mission
-- **Delete Selected** - Remove selected waypoints (disabled if `selectedIds.length === 0`)
-- **Reset Mission** - Clear all waypoints (with confirmation)
+### EditSelectedPanel
 
-#### **Basics Section**
-Core flight parameters.
+**File**: `src/components/Sidebar/EditSelectedPanel.jsx`
 
-**Controls:**
-```jsx
-<Section title="Basics" icon={Settings} defaultOpen={true}>
-  {/* Altitude Slider: 1-120m */}
-  <input
-    type="range"
-    min="1"
-    max="120"
-    value={settings.altitude}
-    onChange={(e) => updateSettings({ altitude: Number(e.target.value) })}
-  />
-  
-  {/* Speed Slider: 1-15 m/s */}
-  <input
-    type="range"
-    min="1"
-    max="15"
-    value={settings.speed}
-    onChange={(e) => updateSettings({ speed: Number(e.target.value) })}
-  />
-  
-  {/* Gimbal Pitch Slider: -90 to 0° */}
-  <input
-    type="range"
-    min="-90"
-    max="0"
-    value={settings.gimbalPitch}
-    onChange={(e) => updateSettings({ gimbalPitch: Number(e.target.value) })}
-  />
-  
-  {/* Drone Model Dropdown */}
-  <select
-    value={settings.selectedDrone}
-    onChange={(e) => updateSettings({ selectedDrone: e.target.value })}
-  >
-    <option value="dji_mini_5_pro">DJI Mini 5 Pro</option>
-    <option value="dji_mini_4_pro">DJI Mini 4 Pro</option>
-    <option value="dji_mavic_4_pro">DJI Mavic 4 Pro</option>
-    <option value="custom">Custom</option>
-  </select>
-  
-  {/* Custom FOV Input (if Custom selected) */}
-  {settings.selectedDrone === 'custom' && (
-    <input
-      type="number"
-      value={settings.customFOV}
-      onChange={(e) => updateSettings({ customFOV: Number(e.target.value) })}
-    />
-  )}
-</Section>
-```
+**Purpose**: Panel for bulk editing selected waypoints. Replaces the main sidebar content when waypoints are selected.
 
-#### **Grid Settings Section**
-Path generation configuration.
-
-**Controls:**
-- Path Type: Radio buttons (Grid / Orbit)
-- Side Overlap: Slider (0-90%)
-- Front Overlap: Slider (0-90%)
-- Grid Angle: Slider (0-360°)
-- Auto Direction: Checkbox
-- Generate Every Point: Checkbox
-- Reverse Path: Checkbox
-- Straighten Legs: Checkbox
-
-#### **Camera Section**
-Photo capture settings.
-
-**Controls:**
-- Waypoint Action: Dropdown (None / Take Photo / Hover)
-- Show Footprints: Checkbox
-
-#### **Advanced Section**
-Additional information and settings.
-
-**Displays:**
-- Selected Drone Model (read-only)
-- Units (read-only)
-
-#### **Generate Button**
-Large button at bottom to trigger path generation.
-
-**Validation:**
-```javascript
-const handleGenerate = () => {
-  if (!currentPolygon) {
-    alert('Please draw a boundary first');
-    return;
-  }
-  
-  const path = settings.pathType === 'grid'
-    ? generatePhotogrammetryPath(currentPolygon, settings)
-    : generateOrbitPath(currentPolygon, settings);
-    
-  setWaypoints(path);
-};
-```
-
-**Key Functions:**
-
-#### `handleReset()`
-Clears mission with user confirmation.
-
-```javascript
-const handleReset = () => {
-  if (confirm('Reset mission? This will clear all waypoints.')) {
-    resetMission();
-  }
-};
-```
-
-#### `handleGenerate()`
-Generates flight path from boundary polygon.
-
-```javascript
-const handleGenerate = () => {
-  if (!currentPolygon) {
-    alert('Please draw a boundary first');
-    return;
-  }
-  
-  const waypoints = settings.pathType === 'grid'
-    ? generatePhotogrammetryPath(currentPolygon, settings)
-    : generateOrbitPath(currentPolygon, settings);
-    
-  setWaypoints(waypoints);
-};
-```
-
-#### `handleFileUpload(e)`
-Processes KML/KMZ file upload.
-
-```javascript
-const handleFileUpload = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  
-  try {
-    const result = await parseImport(file);
-    
-    if (result.type === 'waypoints') {
-      setWaypoints(result.data);
-    }
-  } catch (error) {
-    alert('Failed to import file: ' + error.message);
-  }
-};
-```
-
-**Usage:**
-```jsx
-import SidebarMain from './components/Sidebar/SidebarMain';
-
-function App() {
-  const [polygon, setPolygon] = useState(null);
-  
-  return <SidebarMain currentPolygon={polygon} />;
+**Props:**
+```typescript
+{
+  selectedWaypoints: Array<Waypoint>;
+  selectedIds: Array<string>;
+  settings: Settings;
+  onUpdate: (updates: Partial<Waypoint>) => void;
+  onDelete: () => void;
 }
 ```
+
+**Features:**
+- **Mixed State Handling**: Displays "Mixed" placeholder if selected waypoints have different values.
+- **Fields**:
+  - Lat/Lng (Single selection only)
+  - Altitude
+  - Speed
+  - Gimbal Pitch
+  - Heading
+  - Turn Mode (Straighten Legs)
+  - Action (Photo/Record/None)
+- **Update Logic**: Only updates fields that have been explicitly changed.
+
+---
+
+## 🧩 Dialog Components
+
+### DownloadDialog
+
+**File**: `src/components/Dialogs/DownloadDialog.jsx`
+
+**Purpose**: Modal for configuring mission export.
+
+**Props:**
+```typescript
+{
+  isOpen: boolean;
+  onClose: () => void;
+  onDownload: ({ filename, missionEndAction }) => void;
+  defaultFilename: string;
+  defaultMissionEndAction: 'goHome' | 'autoLand';
+}
+```
+
+**Features:**
+- Filename input with sanitization.
+- Mission End Action selection (Return to Home / Hover).
+
+---
+
+### FlightWarningDialog
+
+**File**: `src/components/Dialogs/FlightWarningDialog.jsx`
+
+**Purpose**: Warning modal for excessive flight duration.
+
+**Props:**
+```typescript
+{
+  isOpen: boolean;
+  onClose: () => void;
+  warningLevel: 'warning' | 'critical';
+  missionTime: string;
+  droneName: string;
+  maxFlightTime: number;
+}
+```
+
+**Features:**
+- **Warning Level**: Yellow (Warning) or Red (Critical) styling.
+- **Context**: Shows estimated time vs max flight time.
+- **Suggestions**: Tips to reduce mission time.
 
 ---
 
@@ -446,265 +208,17 @@ function App() {
 
 **Purpose**: Geocoding search interface using Mapbox Geocoder.
 
-**Props**: None (uses map context)
-
-**Key Features:**
-- Autocomplete search
-- Global location search
-- Flyto animation on selection
-- Positioned absolutely over map
-
-**Implementation:**
-```jsx
-import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
-import { useEffect, useRef } from 'react';
-
-function SearchBar() {
-  const geocoderRef = useRef();
-  
-  useEffect(() => {
-    const geocoder = new MapboxGeocoder({
-      accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl,
-      marker: false,
-      placeholder: 'Search for a location'
-    });
-    
-    geocoder.addTo(geocoderRef.current);
-  }, []);
-  
-  return (
-    <div
-      ref={geocoderRef}
-      className="absolute top-4 left-4 z-10"
-    />
-  );
-}
-```
-
-**Usage:**
-```jsx
-import SearchBar from './components/Common/SearchBar';
-
-function App() {
-  return (
-    <div className="relative">
-      <SearchBar />
-      <MapContainer />
-    </div>
-  );
-}
-```
-
----
-
-## 🎛️ Reusable Components
-
-### Section
-
-**File**: `src/components/Sidebar/SidebarMain.jsx` (Internal component)
-
-**Purpose**: Collapsible section container for sidebar panels.
-
-**Props:**
+**Props**:
 ```typescript
 {
-  title: string;
-  icon: LucideIcon;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
+  map: mapboxgl.Map;
 }
 ```
 
-**State:**
-```javascript
-const [isOpen, setIsOpen] = useState(defaultOpen ?? false);
-```
-
-**Structure:**
-```jsx
-<Section title="Grid Settings" icon={MapIcon} defaultOpen={true}>
-  {/* Section content */}
-</Section>
-```
-
-**Renders:**
-```
-┌─────────────────────────────────────┐
-│ 📍 Grid Settings            [▼]    │ ← Click to toggle
-├─────────────────────────────────────┤
-│                                     │
-│  Section content here...            │ ← Visible when open
-│                                     │
-└─────────────────────────────────────┘
-```
+**Implementation**:
+- Appends `MapboxGeocoder` control to the DOM.
+- Positioned absolutely over the map.
 
 ---
 
-## 🎨 Component Styling
-
-### TailwindCSS Classes
-
-Common patterns used throughout components:
-
-**Buttons:**
-```jsx
-// Primary Button
-className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-
-// Secondary Button
-className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded"
-
-// Danger Button
-className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
-
-// Icon Button
-className="p-2 rounded hover:bg-gray-100"
-
-// Active State
-className={`p-2 rounded ${isActive ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-```
-
-**Inputs:**
-```jsx
-// Range Slider
-className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-
-// Text Input
-className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-
-// Select Dropdown
-className="w-full px-3 py-2 border border-gray-300 rounded bg-white"
-```
-
-**Layout:**
-```jsx
-// Sidebar Container
-className="w-80 bg-white border-l border-gray-300 overflow-y-auto"
-
-// Section Container
-className="border-b border-gray-200 p-4"
-
-// Flex Row
-className="flex items-center justify-between gap-2"
-```
-
----
-
-## 🔗 Component Communication
-
-### Parent → Child (Props)
-
-```
-App
-├─→ MapContainer (onPolygonDrawn)
-├─→ SidebarMain (currentPolygon)
-└─→ SearchBar (no props)
-```
-
-### Child → Parent (Callbacks)
-
-```javascript
-// MapContainer notifies App of polygon changes
-<MapContainer
-  onPolygonDrawn={(polygon) => setCurrentPolygon(polygon)}
-/>
-```
-
-### Global State (Zustand)
-
-All components can access global state:
-
-```javascript
-// Read state
-const waypoints = useMissionStore(state => state.waypoints);
-
-// Update state
-const { updateSettings } = useMissionStore();
-updateSettings({ altitude: 70 });
-```
-
----
-
-## 🧩 Component Hierarchy
-
-```
-App
-├── SearchBar
-├── MapContainer
-│   ├── Mapbox Map Instance
-│   ├── MapboxDraw Instance
-│   ├── DrawToolbar
-│   ├── Waypoint Markers (Layer)
-│   ├── Camera Footprints (Layer)
-│   └── Selected Waypoints (Layer)
-└── SidebarMain
-    ├── Action Bar
-    │   ├── Undo Button
-    │   ├── Redo Button
-    │   ├── Download Button
-    │   ├── Upload Button
-    │   ├── Delete Button
-    │   └── Reset Button
-    ├── Section: Basics
-    │   ├── Altitude Slider
-    │   ├── Speed Slider
-    │   ├── Gimbal Pitch Slider
-    │   └── Drone Dropdown
-    ├── Section: Grid Settings
-    │   ├── Path Type Radio
-    │   ├── Overlap Sliders
-    │   ├── Angle Slider
-    │   └── Toggles
-    ├── Section: Camera
-    │   ├── Action Dropdown
-    │   └── Show Footprints Toggle
-    ├── Section: Advanced
-    │   └── Info Display
-    └── Generate Button
-```
-
----
-
-## 📝 Usage Patterns
-
-### Accessing Store in Components
-
-```javascript
-// Subscribe to specific state slice
-const waypoints = useMissionStore(state => state.waypoints);
-const altitude = useMissionStore(state => state.settings.altitude);
-
-// Access actions
-const { updateSettings, addWaypoint } = useMissionStore();
-```
-
-### Updating Settings
-
-```javascript
-// Single setting
-updateSettings({ altitude: 70 });
-
-// Multiple settings
-updateSettings({
-  altitude: 70,
-  speed: 12,
-  sideOverlap: 75
-});
-```
-
-### Bulk Editing Waypoints
-
-```javascript
-// Update all selected waypoints
-const { updateSelectedWaypoints } = useMissionStore();
-
-updateSelectedWaypoints({
-  altitude: 80,
-  gimbalPitch: -45
-});
-```
-
----
-
-**Last Updated**: 2025-11-23
+**Last Updated**: 2025-11-24
