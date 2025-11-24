@@ -4,7 +4,7 @@ import { saveAs } from 'file-saver';
 export const downloadKMZ = async (waypoints, settings, missionName = "MiniMission") => {
   const zip = new JSZip();
   const now = Date.now();
-  const { speed, straightenLegs, waypointAction, gimbalPitch } = settings;
+  const { speed, straightenLegs, waypointAction, gimbalPitch, missionEndAction } = settings;
 
   // 1. template.kml
   const templateXML = `<?xml version="1.0" encoding="UTF-8"?>
@@ -14,7 +14,7 @@ export const downloadKMZ = async (waypoints, settings, missionName = "MiniMissio
     <wpml:updateTime>${now}</wpml:updateTime>
     <wpml:missionConfig>
       <wpml:flyToWaylineMode>safely</wpml:flyToWaylineMode>
-      <wpml:finishAction>goHome</wpml:finishAction>
+      <wpml:finishAction>${missionEndAction}</wpml:finishAction>
       <wpml:exitOnRCLost>executeLostAction</wpml:exitOnRCLost>
       <wpml:executeRCLostAction>hover</wpml:executeRCLostAction>
       <wpml:globalTransitionalSpeed>${speed}</wpml:globalTransitionalSpeed>
@@ -124,7 +124,7 @@ export const downloadKMZ = async (waypoints, settings, missionName = "MiniMissio
   <Document>
     <wpml:missionConfig>
       <wpml:flyToWaylineMode>safely</wpml:flyToWaylineMode>
-      <wpml:finishAction>goHome</wpml:finishAction>
+      <wpml:finishAction>${missionEndAction}</wpml:finishAction>
       <wpml:exitOnRCLost>executeLostAction</wpml:exitOnRCLost>
       <wpml:executeRCLostAction>hover</wpml:executeRCLostAction>
       <wpml:globalTransitionalSpeed>${speed}</wpml:globalTransitionalSpeed>

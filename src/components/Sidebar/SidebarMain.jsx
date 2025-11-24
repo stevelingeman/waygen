@@ -5,6 +5,7 @@ import { downloadKMZ } from '../../utils/djiExporter';
 import { parseImport } from '../../utils/kmlImporter';
 import { Trash2, Undo, Redo, Download, Play, Upload, ChevronDown, ChevronUp, Settings, Camera, Map as MapIcon, Layers } from 'lucide-react';
 import * as turf from '@turf/turf';
+import DownloadDialog from '../Dialogs/DownloadDialog';
 
 const Section = ({ title, icon: Icon, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -31,8 +32,12 @@ export default function SidebarMain({ currentPolygon }) {
   const {
     waypoints, selectedIds, settings,
     setWaypoints, updateSelectedWaypoints, deleteSelectedWaypoints,
-    undo, redo, updateSettings, resetMission, fitMapToWaypoints
+    undo, redo, updateSettings, resetMission, fitMapToWaypoints,
+    currentMissionFilename, setMissionFilename
   } = useMissionStore();
+
+  // Dialog state for KMZ download
+  const [showDownloadDialog, setShowDownloadDialog] = useState(false);
 
   const handleReset = () => {
     if (confirm("Are you sure you want to reset the mission? This will clear all waypoints and shapes.")) {
@@ -68,6 +73,11 @@ export default function SidebarMain({ currentPolygon }) {
 
       if (newPoints.length > 0) {
         setWaypoints(newPoints);
+
+        // Extract and store filename (without extension)
+        const filename = file.name.replace(/\.(kmz|kml)$/i, '');
+        setMissionFilename(filename);
+
         alert(`Imported ${newPoints.length} waypoints!`);
 
         // Auto-zoom to fit all waypoints with a small delay
@@ -81,6 +91,33 @@ export default function SidebarMain({ currentPolygon }) {
       console.error(err);
       alert("Failed to parse file. Ensure it is a valid KML/KMZ.");
     }
+  };
+
+  // Helper function to generate default filename
+  const getDefaultFilename = () => {
+    if (currentMissionFilename) {
+      return currentMissionFilename;
+    }
+    const now = new Date();
+    const timestamp = now.toISOString()
+      .replace(/[-:]/g, '')
+      .replace(/\..+/, '')
+      .replace('T', '_')
+      .substring(0, 15); // YYYYMMDD_HHMMSS
+    return `waygen_${timestamp}`;
+  };
+
+  // Download dialog handlers
+  const handleDownloadClick = () => {
+    setShowDownloadDialog(true);
+  };
+
+  const handleDownloadConfirm = ({ filename, missionEndAction }) => {
+    // Update mission end action in settings
+    updateSettings({ missionEndAction });
+
+    // Download with custom filename
+    downloadKMZ(waypoints, settings, filename);
   };
 
   // Mission statistics calculations
@@ -217,7 +254,17 @@ export default function SidebarMain({ currentPolygon }) {
     <div className="bg-white h-full border-l w-80 flex flex-col shadow-xl z-10 flex-shrink-0">
       {/* Header */}
       <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-        <h1 className="font-bold text-xl text-gray-800">Waygen</h1>
+        <div>
+          <h1 className="font-bold text-xl text-gray-800">Waygen</h1>
+          {currentMissionFilename && (
+            <div
+              className="text-sm text-gray-500 truncate max-w-[200px]"
+              title={currentMissionFilename}
+            >
+              {currentMissionFilename}
+            </div>
+          )}
+        </div>
         <div className="flex gap-1">
           <button onClick={handleReset} className="p-2 hover:bg-red-100 hover:text-red-600 rounded-full shadow-sm border transition-all" title="Reset Mission"><Trash2 size={16} /></button>
           <div className="w-px h-6 bg-gray-300 mx-1 self-center"></div>
@@ -459,7 +506,7 @@ export default function SidebarMain({ currentPolygon }) {
 
         <div className="flex gap-2">
           <div className="flex-1 bg-white border rounded p-2 text-center">
-            <div className="text-xs  text-gray-400 font-bold uppercase">Waypoints</div>
+            <div className="text-xs text-gray-400 font-bold uppercase">Waypoints</div>
             <div className="font-bold text-gray-700">{waypoints.length}</div>
           </div>
           <div className="flex-1 bg-white border rounded p-2 text-center">
@@ -482,10 +529,19 @@ export default function SidebarMain({ currentPolygon }) {
           </div>
         </div>
 
-        <button onClick={() => downloadKMZ(waypoints, settings)} disabled={waypoints.length === 0} className="w-full mt-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold p-3 rounded-lg shadow-md flex items-center justify-center gap-2 transition-all">
+        <button onClick={handleDownloadClick} disabled={waypoints.length === 0} className="w-full mt-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold p-3 rounded-lg shadow-md flex items-center justify-center gap-2 transition-all">
           <Download size={18} /> Download KMZ
         </button>
       </div>
+
+      {/* Download Dialog */}
+      <DownloadDialog
+        isOpen={showDownloadDialog}
+        onClose={() => setShowDownloadDialog(false)}
+        onDownload={handleDownloadConfirm}
+        defaultFilename={getDefaultFilename()}
+        defaultMissionEndAction={settings.missionEndAction}
+      />
     </div>
   );
 }

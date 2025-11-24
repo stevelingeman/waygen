@@ -9,6 +9,9 @@ export const useMissionStore = create((set, get) => ({
   // Map Reference
   mapRef: null,
 
+  // Mission metadata
+  currentMissionFilename: null,
+
   // History Stack
   past: [],
   future: [],
@@ -34,6 +37,7 @@ export const useMissionStore = create((set, get) => ({
     straightenLegs: false,
     units: 'metric',
     orbitRadius: 50,
+    missionEndAction: 'goHome', // 'goHome' | 'autoLand'
   },
 
   // Actions
@@ -168,6 +172,10 @@ export const useMissionStore = create((set, get) => ({
     });
   },
 
+  // Mission Filename Actions
+  setMissionFilename: (filename) => set({ currentMissionFilename: filename }),
+  clearMissionFilename: () => set({ currentMissionFilename: null }),
+
   // Reset Logic
   resetTrigger: 0,
   resetMission: () => set((state) => ({
@@ -175,6 +183,7 @@ export const useMissionStore = create((set, get) => ({
     selectedIds: [],
     past: [],
     future: [],
+    currentMissionFilename: null,
     resetTrigger: state.resetTrigger + 1
   }))
 }));
