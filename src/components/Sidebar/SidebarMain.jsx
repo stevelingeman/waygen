@@ -334,15 +334,6 @@ export default function SidebarMain({ currentPolygon }) {
               />
             </div>
           </div>
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Global Speed (m/s)</label>
-            <input
-              type="number"
-              value={settings.speed}
-              onChange={e => updateSettings({ speed: Number(e.target.value) })}
-              className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-          </div>
 
           <div className="mt-4 border-t pt-3">
             <label className="text-xs font-bold text-gray-500 mb-1 block">Drone Model (FOV)</label>
@@ -364,6 +355,13 @@ export default function SidebarMain({ currentPolygon }) {
               <option value="dji_mavic_4_pro">DJI Mavic 4 Pro (72°)</option>
               <option value="custom">Custom</option>
             </select>
+          </div>
+
+          <div className="mt-2">
+            <label className="text-xs font-bold text-gray-500 mb-1 block">Photo Interval</label>
+            <div className="text-sm text-gray-700 bg-gray-50 border rounded p-1.5">
+              {getDronePreset(settings.selectedDrone)?.photoInterval || 5.5} seconds
+            </div>
           </div>
 
           {settings.selectedDrone === 'custom' && (
@@ -531,7 +529,7 @@ export default function SidebarMain({ currentPolygon }) {
           <Play size={18} /> Generate Path
         </button>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col gap-2">
           <div className="bg-white border rounded p-2 text-center">
             <div className="text-xs text-gray-400 font-bold uppercase">Waypoints</div>
             <div className="font-bold text-gray-700">{waypoints.length}</div>
@@ -554,14 +552,20 @@ export default function SidebarMain({ currentPolygon }) {
               }
             </div>
           </div>
-          <div className="bg-white border rounded p-2 text-center">
+          <div className={`bg-white border rounded p-2 text-center ${(() => {
+              const level = useMissionStore.getState().getFlightWarningLevel();
+              if (level === 'critical') return 'border-red-500 bg-red-50';
+              if (level === 'warning') return 'border-yellow-500 bg-yellow-50';
+              return '';
+            })()
+            }`}>
             <div className="text-xs text-gray-400 font-bold uppercase">Est. Time</div>
             <div className={`font-bold ${(() => {
-              const level = useMissionStore.getState().getFlightWarningLevel();
-              if (level === 'critical') return 'text-red-500';
-              if (level === 'warning') return 'text-yellow-600';
-              return 'text-gray-700';
-            })()
+                const level = useMissionStore.getState().getFlightWarningLevel();
+                if (level === 'critical') return 'text-red-600';
+                if (level === 'warning') return 'text-yellow-700';
+                return 'text-gray-700';
+              })()
               }`}>
               {waypoints.length >= 2 && useMissionStore.getState().calculatedMaxSpeed > 0
                 ? (() => {
