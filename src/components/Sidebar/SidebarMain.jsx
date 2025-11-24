@@ -35,7 +35,8 @@ export default function SidebarMain({ currentPolygon }) {
     waypoints, selectedIds, settings,
     setWaypoints, updateSelectedWaypoints, deleteSelectedWaypoints,
     undo, redo, updateSettings, resetMission, fitMapToWaypoints,
-    currentMissionFilename, setMissionFilename
+    currentMissionFilename, setMissionFilename,
+    calculatedMaxSpeed, minSegmentDistance
   } = useMissionStore();
 
   // Dialog state for KMZ download
@@ -545,29 +546,29 @@ export default function SidebarMain({ currentPolygon }) {
           </div>
           <div className="bg-white border rounded p-2 text-center">
             <div className="text-xs text-gray-400 font-bold uppercase">Max Speed</div>
-            <div className="font-bold text-gray-700" title={`Based on ${Math.round(useMissionStore.getState().minSegmentDistance)}m minimum segment`}>
-              {waypoints.length >= 2 && useMissionStore.getState().calculatedMaxSpeed > 0
-                ? `${useMissionStore.getState().calculatedMaxSpeed.toFixed(1)} m/s`
+            <div className="font-bold text-gray-700" title={`Based on ${Math.round(minSegmentDistance)}m minimum segment`}>
+              {waypoints.length >= 2 && calculatedMaxSpeed > 0
+                ? `${calculatedMaxSpeed.toFixed(1)} m/s`
                 : '0 m/s'
               }
             </div>
           </div>
           <div className={`bg-white border rounded p-2 text-center ${(() => {
-              const level = useMissionStore.getState().getFlightWarningLevel();
-              if (level === 'critical') return 'border-red-500 bg-red-50';
-              if (level === 'warning') return 'border-yellow-500 bg-yellow-50';
-              return '';
-            })()
+            const level = useMissionStore.getState().getFlightWarningLevel();
+            if (level === 'critical') return 'border-red-500 bg-red-50';
+            if (level === 'warning') return 'border-yellow-500 bg-yellow-50';
+            return '';
+          })()
             }`}>
             <div className="text-xs text-gray-400 font-bold uppercase">Est. Time</div>
             <div className={`font-bold ${(() => {
-                const level = useMissionStore.getState().getFlightWarningLevel();
-                if (level === 'critical') return 'text-red-600';
-                if (level === 'warning') return 'text-yellow-700';
-                return 'text-gray-700';
-              })()
+              const level = useMissionStore.getState().getFlightWarningLevel();
+              if (level === 'critical') return 'text-red-600';
+              if (level === 'warning') return 'text-yellow-700';
+              return 'text-gray-700';
+            })()
               }`}>
-              {waypoints.length >= 2 && useMissionStore.getState().calculatedMaxSpeed > 0
+              {waypoints.length >= 2 && calculatedMaxSpeed > 0
                 ? (() => {
                   const missionTime = useMissionStore.getState().getMissionTime();
                   const level = useMissionStore.getState().getFlightWarningLevel();
