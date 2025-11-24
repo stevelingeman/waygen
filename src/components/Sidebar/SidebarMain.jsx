@@ -8,6 +8,7 @@ import * as turf from '@turf/turf';
 import DownloadDialog from '../Dialogs/DownloadDialog';
 import FlightWarningDialog from '../Dialogs/FlightWarningDialog';
 import { getDronePreset } from '../../utils/dronePresets';
+import { toDisplay, toMetric } from '../../utils/units';
 
 const Section = ({ title, icon: Icon, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -233,13 +234,13 @@ export default function SidebarMain({ currentPolygon }) {
           </>
         )}
 
-        <label className="text-xs font-bold text-gray-500">Altitude (m)</label>
+        <label className="text-xs font-bold text-gray-500">Altitude ({settings.units === 'metric' ? 'm' : 'ft'})</label>
         <input
           type="number"
           className="border p-2 rounded w-full mb-4"
           placeholder={sameAltitude ? "" : "Mixed"}
-          value={sameAltitude ? firstWp.altitude : ""}
-          onChange={(e) => updateSelectedWaypoints({ altitude: Number(e.target.value) })}
+          value={sameAltitude ? toDisplay(firstWp.altitude, settings.units) : ""}
+          onChange={(e) => updateSelectedWaypoints({ altitude: toMetric(Number(e.target.value), settings.units) })}
         />
 
         <label className="text-xs font-bold text-gray-500">Speed (m/s)</label>
@@ -361,8 +362,8 @@ export default function SidebarMain({ currentPolygon }) {
               <label className="text-xs font-bold text-gray-500 mb-1 block">Altitude ({settings.units === 'metric' ? 'm' : 'ft'})</label>
               <input
                 type="number"
-                value={settings.altitude}
-                onChange={e => updateSettings({ altitude: Number(e.target.value) })}
+                value={toDisplay(settings.altitude, settings.units)}
+                onChange={e => updateSettings({ altitude: toMetric(Number(e.target.value), settings.units) })}
                 className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
@@ -468,12 +469,12 @@ export default function SidebarMain({ currentPolygon }) {
           ) : (
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-gray-500 mb-1 block">Spacing (m)</label>
+                <label className="text-xs font-bold text-gray-500 mb-1 block">Spacing ({settings.units === 'metric' ? 'm' : 'ft'})</label>
                 <input
                   type="number"
                   min="1"
-                  value={settings.spacing}
-                  onChange={e => updateSettings({ spacing: Number(e.target.value) })}
+                  value={toDisplay(settings.spacing, settings.units)}
+                  onChange={e => updateSettings({ spacing: toMetric(Number(e.target.value), settings.units) })}
                   className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                 />
                 <p className="text-[10px] text-gray-400 mt-1">Distance between waypoints along the perimeter.</p>
