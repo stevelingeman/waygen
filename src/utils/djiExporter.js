@@ -34,12 +34,35 @@ export const downloadKMZ = async (waypoints, settings, missionName = "MiniMissio
     const isLast = i === waypoints.length - 1;
     const actionId = i + 1;
 
+    // Determine effective values (waypoint override > global setting)
+    const effectiveStraightenLegs = wp.straightenLegs !== undefined ? wp.straightenLegs : straightenLegs;
+    const effectiveAction = wp.action !== undefined ? wp.action : waypointAction;
+    const effectiveGimbalPitch = wp.gimbalPitch !== undefined ? wp.gimbalPitch : gimbalPitch;
+
     // Action Generation Logic
     let actions = "";
     let actionCount = 0;
 
-    // 1. Gimbal Action (Always on first point, or if pitch changes - simplified to first point for now)
-    if (isFirst) {
+    // 1. Gimbal Action (Always on first point, or if pitch changes)
+    // For now, we'll just use the effective pitch for the first point, 
+    // OR if it differs from the previous point (if we were tracking that).
+    // The original code only did it for the first point. 
+    // Let's stick to first point for global, but if it's a specific waypoint override, maybe we should apply it?
+    // Actually, if every waypoint has a pitch, we might want to apply it.
+    // But standard behavior is usually just set at start.
+    // Let's keep it simple: If it's the first point, set it. 
+    // If it's NOT the first point but has a specific override different from global, maybe set it?
+    // For safety/simplicity in this task, let's just use the effective pitch at the start.
+    // IMPROVEMENT: If we want dynamic gimbal, we should check if (i > 0 && wp.gimbalPitch !== prev.gimbalPitch).
+    // But let's stick to the requested scope: "Show ALL waypoint attributes". 
+    // If the user changes pitch on a waypoint, they expect the drone to pitch there.
+
+    // Let's try to be smart: Always add gimbal action if it's the first point.
+    // AND add it if the effective pitch is different from the previous effective pitch.
+    const prevWp = i > 0 ? waypoints[i - 1] : null;
+    const prevEffectivePitch = prevWp ? (prevWp.gimbalPitch !== undefined ? prevWp.gimbalPitch : gimbalPitch) : null;
+
+    if (isFirst || (prevEffectivePitch !== null && effectiveGimbalPitch !== prevEffectivePitch)) {
       actions += `
         <wpml:action>
           <wpml:actionId>${actionCount++}</wpml:actionId>
@@ -48,7 +71,7 @@ export const downloadKMZ = async (waypoints, settings, missionName = "MiniMissio
             <wpml:gimbalHeadingYawBase>aircraft</wpml:gimbalHeadingYawBase>
             <wpml:gimbalRotateMode>absoluteAngle</wpml:gimbalRotateMode>
             <wpml:gimbalPitchRotateEnable>1</wpml:gimbalPitchRotateEnable>
-            <wpml:gimbalPitchRotateAngle>${gimbalPitch}</wpml:gimbalPitchRotateAngle>
+            <wpml:gimbalPitchRotateAngle>${effectiveGimbalPitch}</wpml:gimbalPitchRotateAngle>
             <wpml:gimbalRollRotateEnable>0</wpml:gimbalRollRotateEnable>
             <wpml:gimbalYawRotateEnable>0</wpml:gimbalYawRotateEnable>
             <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
@@ -57,7 +80,7 @@ export const downloadKMZ = async (waypoints, settings, missionName = "MiniMissio
     }
 
     // 2. Waypoint Actions (Photo/Record)
-    if (waypointAction === 'photo') {
+    if (effectiveAction === 'photo') {
       actions += `
         <wpml:action>
           <wpml:actionId>${actionCount++}</wpml:actionId>
@@ -67,7 +90,27 @@ export const downloadKMZ = async (waypoints, settings, missionName = "MiniMissio
             <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
           </wpml:actionActuatorFuncParam>
         </wpml:action>`;
-    } else if (waypointAction === 'record') {
+    } else if (effectiveAction === 'record_start') {
+      actions += `
+          <wpml:action>
+            <wpml:actionId>${actionCount++}</wpml:actionId>
+            <wpml:actionActuatorFunc>startRecord</wpml:actionActuatorFunc>
+            <wpml:actionActuatorFuncParam>
+              <wpml:fileSuffix>mission</wpml:fileSuffix>
+              <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
+            </wpml:actionActuatorFuncParam>
+          </wpml:action>`;
+    } else if (effectiveAction === 'record_stop') {
+      actions += `
+          <wpml:action>
+            <wpml:actionId>${actionCount++}</wpml:actionId>
+            <wpml:actionActuatorFunc>stopRecord</wpml:actionActuatorFunc>
+            <wpml:actionActuatorFuncParam>
+              <wpml:payloadPositionIndex>0</wpml:payloadPositionIndex>
+            </wpml:actionActuatorFuncParam>
+          </wpml:action>`;
+    } else if (effectiveAction === 'record') {
+      // Legacy/Global behavior
       if (isFirst) {
         actions += `
             <wpml:action>
@@ -114,7 +157,7 @@ export const downloadKMZ = async (waypoints, settings, missionName = "MiniMissio
         <wpml:waypointHeadingAngleEnable>0</wpml:waypointHeadingAngleEnable>
         <wpml:waypointHeadingPathMode>followBadArc</wpml:waypointHeadingPathMode>
       </wpml:waypointHeadingParam>
-      <wpml:useStraightLine>${straightenLegs ? 1 : 0}</wpml:useStraightLine>
+      <wpml:useStraightLine>${effectiveStraightenLegs ? 1 : 0}</wpml:useStraightLine>
       ${actionGroupXML}
     </Placemark>`;
   });

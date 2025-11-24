@@ -269,6 +269,38 @@ export default function SidebarMain({ currentPolygon }) {
           onChange={(e) => updateSelectedWaypoints({ heading: Number(e.target.value) })}
         />
 
+        <label className="text-xs font-bold text-gray-500">Turn Mode</label>
+        <select
+          className="border p-2 rounded w-full mb-4 text-sm bg-white"
+          value={selectedWaypoints.every(wp => wp.straightenLegs === firstWp.straightenLegs) ? (firstWp.straightenLegs === undefined ? 'global' : firstWp.straightenLegs.toString()) : 'mixed'}
+          onChange={(e) => {
+            const val = e.target.value;
+            updateSelectedWaypoints({ straightenLegs: val === 'global' ? undefined : val === 'true' });
+          }}
+        >
+          <option value="mixed" disabled hidden>Mixed</option>
+          <option value="global">Global Setting</option>
+          <option value="false">Curved (Continuous)</option>
+          <option value="true">Straight (Stop & Turn)</option>
+        </select>
+
+        <label className="text-xs font-bold text-gray-500">Action</label>
+        <select
+          className="border p-2 rounded w-full mb-4 text-sm bg-white"
+          value={selectedWaypoints.every(wp => wp.action === firstWp.action) ? (firstWp.action || 'global') : 'mixed'}
+          onChange={(e) => {
+            const val = e.target.value;
+            updateSelectedWaypoints({ action: val === 'global' ? undefined : val });
+          }}
+        >
+          <option value="mixed" disabled hidden>Mixed</option>
+          <option value="global">Global Setting</option>
+          <option value="none">None</option>
+          <option value="photo">Take Photo</option>
+          <option value="record_start">Start Recording</option>
+          <option value="record_stop">Stop Recording</option>
+        </select>
+
         <div className="mt-auto flex gap-2 pt-4">
           <button onClick={deleteSelectedWaypoints} className="flex-1 bg-red-500 hover:bg-red-600 text-white p-2 rounded flex items-center justify-center gap-2 transition-colors">
             <Trash2 size={16} /> Delete
