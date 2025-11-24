@@ -18,8 +18,27 @@ export default function EditSelectedPanel({
 
         const firstWp = selectedWaypoints[0];
 
-        // Helper to check if all selected have same value
+        // Helper to resolve effective values
+        const resolveStraighten = (wp) => {
+            if (wp.straightenLegs !== undefined) return wp.straightenLegs.toString();
+            return settings.straightenLegs ? 'true' : 'false';
+        };
+
+        const resolveAction = (wp) => {
+            if (wp.action) return wp.action;
+            if (settings.waypointAction === 'photo') return 'photo';
+            // For 'record', we default to 'none' in the UI to enforce explicit selection, 
+            // as 'record' is a complex global state (start/stop) not easily mapped to a single point without context.
+            return 'none';
+        };
+
+        const firstStraighten = resolveStraighten(firstWp);
+        const firstAction = resolveAction(firstWp);
+
+        // Helper to check if all selected have same value (for simple fields)
         const allSame = (key) => selectedWaypoints.every(wp => wp[key] === firstWp[key]);
+        // Helper to check if all selected have same RESOLVED value (for complex fields)
+        const allSameResolved = (resolver, val) => selectedWaypoints.every(wp => resolver(wp) === val);
 
         const initialState = {
             lat: selectedIds.length === 1 ? firstWp.lat : '',
@@ -28,17 +47,13 @@ export default function EditSelectedPanel({
             speed: allSame('speed') ? toDisplay(firstWp.speed, settings.units) : '',
             gimbalPitch: allSame('gimbalPitch') ? firstWp.gimbalPitch : '',
             heading: allSame('heading') ? firstWp.heading : '',
-            straightenLegs: allSame('straightenLegs')
-                ? (firstWp.straightenLegs === undefined ? 'global' : firstWp.straightenLegs.toString())
-                : 'mixed',
-            action: allSame('action')
-                ? (firstWp.action || 'global')
-                : 'mixed'
+            straightenLegs: allSameResolved(resolveStraighten, firstStraighten) ? firstStraighten : 'mixed',
+            action: allSameResolved(resolveAction, firstAction) ? firstAction : 'mixed'
         };
 
         setLocalState(initialState);
         setHasChanges(false);
-    }, [selectedIds, selectedWaypoints, settings.units]);
+    }, [selectedIds, selectedWaypoints, settings]);
 
     const handleChange = (key, value) => {
         setLocalState(prev => ({ ...prev, [key]: value }));
@@ -48,8 +63,7 @@ export default function EditSelectedPanel({
     const handleSave = () => {
         const updates = {};
 
-        // Only include fields that are not "mixed" or empty (unless explicitly cleared, but here we assume empty means no change for mixed fields)
-        // For single selection, we update everything. For multi, we only update what changed from "mixed".
+        // Only include fields that are not "mixed" or empty
 
         if (selectedIds.length === 1) {
             updates.lat = Number(localState.lat);
@@ -62,11 +76,13 @@ export default function EditSelectedPanel({
         if (localState.heading !== '') updates.heading = Number(localState.heading);
 
         if (localState.straightenLegs !== 'mixed') {
-            updates.straightenLegs = localState.straightenLegs === 'global' ? undefined : localState.straightenLegs === 'true';
+            // Always save explicit value, never undefined
+            updates.straightenLegs = localState.straightenLegs === 'true';
         }
 
         if (localState.action !== 'mixed') {
-            updates.action = localState.action === 'global' ? undefined : localState.action;
+            // Always save explicit value
+            updates.action = localState.action;
         }
 
         onUpdate(updates);
@@ -147,7 +163,6 @@ export default function EditSelectedPanel({
                 onChange={(e) => handleChange('straightenLegs', e.target.value)}
             >
                 <option value="mixed" disabled hidden>Mixed</option>
-                <option value="global">Global Setting</option>
                 <option value="false">Curved (Continuous)</option>
                 <option value="true">Straight (Stop & Turn)</option>
             </select>
@@ -159,7 +174,6 @@ export default function EditSelectedPanel({
                 onChange={(e) => handleChange('action', e.target.value)}
             >
                 <option value="mixed" disabled hidden>Mixed</option>
-                <option value="global">Global Setting</option>
                 <option value="none">None</option>
                 <option value="photo">Take Photo</option>
                 <option value="record_start">Start Recording</option>
