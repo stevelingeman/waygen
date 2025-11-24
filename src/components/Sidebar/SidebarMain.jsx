@@ -458,50 +458,6 @@ export default function SidebarMain({ currentPolygon }) {
               className="accent-blue-600 w-4 h-4"
             />
           </div>
-        </Section>
-
-        <Section title="Camera" icon={Camera} defaultOpen={true}>
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Gimbal Pitch {settings.gimbalPitch}°</label>
-            <input type="range" min="-90" max="0" value={settings.gimbalPitch} onChange={e => updateSettings({ gimbalPitch: Number(e.target.value) })} className="w-full accent-blue-600" />
-          </div>
-          <div className="mt-2">
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Action per Waypoint</label>
-            <select
-              value={settings.waypointAction}
-              onChange={e => updateSettings({ waypointAction: e.target.value })}
-              className="w-full border rounded p-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="none">No Action</option>
-              <option value="photo">Take Photo</option>
-              <option value="record">Start/Stop Recording</option>
-            </select>
-          </div>
-        </Section>
-
-
-
-        <Section title="Advanced" icon={Layers} defaultOpen={true}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-700">Show Footprints</label>
-              {settings.showFootprints && (
-                <input
-                  type="color"
-                  value={settings.footprintColor}
-                  onChange={e => updateSettings({ footprintColor: e.target.value })}
-                  className="w-4 h-4 rounded border border-gray-300 cursor-pointer"
-                  title="Choose footprint color"
-                />
-              )}
-            </div>
-            <input
-              type="checkbox"
-              checked={settings.showFootprints}
-              onChange={e => updateSettings({ showFootprints: e.target.checked })}
-              className="accent-blue-600 w-4 h-4"
-            />
-          </div>
           <div className="flex items-center justify-between mt-3">
             <label className="text-sm text-gray-700">Straighten Legs</label>
             <input
@@ -521,6 +477,49 @@ export default function SidebarMain({ currentPolygon }) {
             />
           </div>
         </Section>
+
+        <Section title="Camera" icon={Camera} defaultOpen={true}>
+          <div>
+            <label className="text-xs font-bold text-gray-500 mb-1 block">Gimbal Pitch {settings.gimbalPitch}°</label>
+            <input type="range" min="-90" max="0" value={settings.gimbalPitch} onChange={e => updateSettings({ gimbalPitch: Number(e.target.value) })} className="w-full accent-blue-600" />
+          </div>
+          <div className="mt-2">
+            <label className="text-xs font-bold text-gray-500 mb-1 block">Action per Waypoint</label>
+            <select
+              value={settings.waypointAction}
+              onChange={e => updateSettings({ waypointAction: e.target.value })}
+              className="w-full border rounded p-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="none">No Action</option>
+              <option value="photo">Take Photo</option>
+              <option value="record">Start/Stop Recording</option>
+            </select>
+          </div>
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-700">Show Footprints</label>
+              {settings.showFootprints && (
+                <input
+                  type="color"
+                  value={settings.footprintColor}
+                  onChange={e => updateSettings({ footprintColor: e.target.value })}
+                  className="w-4 h-4 rounded border border-gray-300 cursor-pointer"
+                  title="Choose footprint color"
+                />
+              )}
+            </div>
+            <input
+              type="checkbox"
+              checked={settings.showFootprints}
+              onChange={e => updateSettings({ showFootprints: e.target.checked })}
+              className="accent-blue-600 w-4 h-4"
+            />
+          </div>
+        </Section>
+
+
+
+
 
       </div>
 
