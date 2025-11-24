@@ -354,7 +354,7 @@ export default function MapContainer({ onPolygonDrawn }) {
 
     const onPointMouseEnter = () => {
       if (!draggedPoint.current) {
-        map.current.getCanvas().style.cursor = 'move';
+        map.current.getCanvas().style.cursor = 'pointer';
       }
     };
 
@@ -368,6 +368,9 @@ export default function MapContainer({ onPolygonDrawn }) {
       // Prevent drag if we are in a drawing mode or holding shift (selection)
       if (draw.current.getMode() !== 'simple_select' && draw.current.getMode() !== 'direct_select') return;
       if (e.originalEvent.shiftKey) return;
+
+      // REQUIRE ALT KEY FOR DRAGGING
+      if (!e.originalEvent.altKey) return;
 
       e.preventDefault();
 
