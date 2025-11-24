@@ -55,7 +55,8 @@ export const DRONE_PRESETS = {
  * @returns {Object|null} Drone preset object or null if not found
  */
 export const getDronePreset = (droneId) => {
-    return DRONE_PRESETS[droneId] || null;
+    const mappedId = mapLegacyDroneId(droneId);
+    return DRONE_PRESETS[mappedId] || null;
 };
 
 /**
