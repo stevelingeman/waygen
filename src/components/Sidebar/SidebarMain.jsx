@@ -9,6 +9,7 @@ import DownloadDialog from '../Dialogs/DownloadDialog';
 import FlightWarningDialog from '../Dialogs/FlightWarningDialog';
 import { getDronePreset } from '../../utils/dronePresets';
 import { toDisplay, toMetric } from '../../utils/units';
+import EditSelectedPanel from './EditSelectedPanel';
 
 const Section = ({ title, icon: Icon, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -193,121 +194,15 @@ export default function SidebarMain({ currentPolygon }) {
   // Bulk Edit Mode
   if (selectedIds.length > 0) {
     const selectedWaypoints = waypoints.filter(wp => selectedIds.includes(wp.id));
-    const firstWp = selectedWaypoints[0];
-
-    // Check if all have same values
-    const sameAltitude = selectedWaypoints.every(wp => wp.altitude === firstWp.altitude);
-    const sameSpeed = selectedWaypoints.every(wp => wp.speed === firstWp.speed);
-    const sameGimbal = selectedWaypoints.every(wp => wp.gimbalPitch === firstWp.gimbalPitch);
-    const sameHeading = selectedWaypoints.every(wp => wp.heading === firstWp.heading);
-    // Lat/Lng will always be different for multiple points, so we only show if 1 is selected
-    const singleSelection = selectedIds.length === 1;
 
     return (
-      <div className="p-4 bg-gray-50 h-full border-l w-80 flex flex-col shadow-xl z-10 overflow-y-auto">
-        <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
-          <Settings size={20} /> Edit Selected ({selectedIds.length})
-        </h2>
-
-        {singleSelection && (
-          <>
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <div>
-                <label className="text-xs font-bold text-gray-500">Lat</label>
-                <input
-                  type="number"
-                  className="border p-2 rounded w-full text-xs"
-                  value={firstWp.lat}
-                  onChange={(e) => updateSelectedWaypoints({ lat: Number(e.target.value) })}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500">Lng</label>
-                <input
-                  type="number"
-                  className="border p-2 rounded w-full text-xs"
-                  value={firstWp.lng}
-                  onChange={(e) => updateSelectedWaypoints({ lng: Number(e.target.value) })}
-                />
-              </div>
-            </div>
-          </>
-        )}
-
-        <label className="text-xs font-bold text-gray-500">Altitude ({settings.units === 'metric' ? 'm' : 'ft'})</label>
-        <input
-          type="number"
-          className="border p-2 rounded w-full mb-4"
-          placeholder={sameAltitude ? "" : "Mixed"}
-          value={sameAltitude ? toDisplay(firstWp.altitude, settings.units) : ""}
-          onChange={(e) => updateSelectedWaypoints({ altitude: toMetric(Number(e.target.value), settings.units) })}
-        />
-
-        <label className="text-xs font-bold text-gray-500">Speed ({settings.units === 'metric' ? 'm/s' : 'ft/s'})</label>
-        <input
-          type="number"
-          className="border p-2 rounded w-full mb-4"
-          placeholder={sameSpeed ? "" : "Mixed"}
-          value={sameSpeed ? toDisplay(firstWp.speed, settings.units) : ""}
-          onChange={(e) => updateSelectedWaypoints({ speed: toMetric(Number(e.target.value), settings.units) })}
-        />
-
-        <label className="text-xs font-bold text-gray-500">Gimbal Pitch (°)</label>
-        <input
-          type="number"
-          className="border p-2 rounded w-full mb-4"
-          placeholder={sameGimbal ? "" : "Mixed"}
-          value={sameGimbal ? firstWp.gimbalPitch : ""}
-          onChange={(e) => updateSelectedWaypoints({ gimbalPitch: Number(e.target.value) })}
-        />
-
-        <label className="text-xs font-bold text-gray-500">Heading (°)</label>
-        <input
-          type="number"
-          className="border p-2 rounded w-full mb-4"
-          placeholder={sameHeading ? "" : "Mixed"}
-          value={sameHeading ? firstWp.heading : ""}
-          onChange={(e) => updateSelectedWaypoints({ heading: Number(e.target.value) })}
-        />
-
-        <label className="text-xs font-bold text-gray-500">Turn Mode</label>
-        <select
-          className="border p-2 rounded w-full mb-4 text-sm bg-white"
-          value={selectedWaypoints.every(wp => wp.straightenLegs === firstWp.straightenLegs) ? (firstWp.straightenLegs === undefined ? 'global' : firstWp.straightenLegs.toString()) : 'mixed'}
-          onChange={(e) => {
-            const val = e.target.value;
-            updateSelectedWaypoints({ straightenLegs: val === 'global' ? undefined : val === 'true' });
-          }}
-        >
-          <option value="mixed" disabled hidden>Mixed</option>
-          <option value="global">Global Setting</option>
-          <option value="false">Curved (Continuous)</option>
-          <option value="true">Straight (Stop & Turn)</option>
-        </select>
-
-        <label className="text-xs font-bold text-gray-500">Action</label>
-        <select
-          className="border p-2 rounded w-full mb-4 text-sm bg-white"
-          value={selectedWaypoints.every(wp => wp.action === firstWp.action) ? (firstWp.action || 'global') : 'mixed'}
-          onChange={(e) => {
-            const val = e.target.value;
-            updateSelectedWaypoints({ action: val === 'global' ? undefined : val });
-          }}
-        >
-          <option value="mixed" disabled hidden>Mixed</option>
-          <option value="global">Global Setting</option>
-          <option value="none">None</option>
-          <option value="photo">Take Photo</option>
-          <option value="record_start">Start Recording</option>
-          <option value="record_stop">Stop Recording</option>
-        </select>
-
-        <div className="mt-auto flex gap-2 pt-4">
-          <button onClick={deleteSelectedWaypoints} className="flex-1 bg-red-500 hover:bg-red-600 text-white p-2 rounded flex items-center justify-center gap-2 transition-colors">
-            <Trash2 size={16} /> Delete
-          </button>
-        </div>
-      </div>
+      <EditSelectedPanel
+        selectedWaypoints={selectedWaypoints}
+        selectedIds={selectedIds}
+        settings={settings}
+        onUpdate={updateSelectedWaypoints}
+        onDelete={deleteSelectedWaypoints}
+      />
     );
   }
 
