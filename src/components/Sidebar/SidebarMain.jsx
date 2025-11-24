@@ -243,13 +243,13 @@ export default function SidebarMain({ currentPolygon }) {
           onChange={(e) => updateSelectedWaypoints({ altitude: toMetric(Number(e.target.value), settings.units) })}
         />
 
-        <label className="text-xs font-bold text-gray-500">Speed (m/s)</label>
+        <label className="text-xs font-bold text-gray-500">Speed ({settings.units === 'metric' ? 'm/s' : 'ft/s'})</label>
         <input
           type="number"
           className="border p-2 rounded w-full mb-4"
           placeholder={sameSpeed ? "" : "Mixed"}
-          value={sameSpeed ? firstWp.speed : ""}
-          onChange={(e) => updateSelectedWaypoints({ speed: Number(e.target.value) })}
+          value={sameSpeed ? toDisplay(firstWp.speed, settings.units) : ""}
+          onChange={(e) => updateSelectedWaypoints({ speed: toMetric(Number(e.target.value), settings.units) })}
         />
 
         <label className="text-xs font-bold text-gray-500">Gimbal Pitch (°)</label>
@@ -580,8 +580,8 @@ export default function SidebarMain({ currentPolygon }) {
             <div className="text-xs text-gray-400 font-bold uppercase">Max Speed</div>
             <div className="font-bold text-gray-700" title={`Based on ${Math.round(minSegmentDistance)}m minimum segment`}>
               {waypoints.length >= 2 && calculatedMaxSpeed > 0
-                ? `${calculatedMaxSpeed.toFixed(1)} m/s`
-                : '0 m/s'
+                ? `${toDisplay(calculatedMaxSpeed, settings.units).toFixed(1)} ${settings.units === 'metric' ? 'm/s' : 'ft/s'}`
+                : settings.units === 'metric' ? '0 m/s' : '0 ft/s'
               }
             </div>
           </div>
