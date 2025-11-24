@@ -1,4 +1,5 @@
 import * as turf from '@turf/turf';
+import { FLIGHT_WARNING_THRESHOLD, TAKEOFF_LANDING_OVERHEAD } from './dronePresets';
 
 /**
  * Calculates the camera footprint on the ground.
@@ -63,3 +64,81 @@ export const calculateFootprint = (center, altitude, heading, hfov) => {
         hfov
     });
 };
+
+/**
+ * Calculate distance between two waypoints in meters
+ * @param {Object} wp1 - First waypoint { lng, lat }
+ * @param {Object} wp2 - Second waypoint { lng, lat }
+ * @returns {number} Distance in meters
+ */
+export const calculateDistance = (wp1, wp2) => {
+    const from = turf.point([wp1.lng, wp1.lat]);
+    const to = turf.point([wp2.lng, wp2.lat]);
+    return turf.distance(from, to, { units: 'meters' });
+};
+
+/**
+ * Calculate maximum safe speed based on waypoint geometry and photo interval
+ * Ensures drone doesn't arrive at next waypoint before camera is ready
+ * @param {Array} waypoints - Array of waypoint objects with lng, lat
+ * @param {number} photoInterval - Minimum seconds between photos
+ * @returns {Object} { maxSpeed: number, minDistance: number }
+ */
+export const calculateMaxSpeed = (waypoints, photoInterval) => {
+    if (!waypoints || waypoints.length < 2 || !photoInterval || photoInterval <= 0) {
+        return { maxSpeed: 0, minDistance: 0 };
+    }
+
+    const distances = [];
+    for (let i = 0; i < waypoints.length - 1; i++) {
+        const distance = calculateDistance(waypoints[i], waypoints[i + 1]);
+        distances.push(distance);
+    }
+
+    const minDistance = Math.min(...distances);
+    const maxSpeed = minDistance / photoInterval;
+
+    return {
+        maxSpeed: Math.max(0, maxSpeed), // Ensure non-negative
+        minDistance
+    };
+};
+
+/**
+ * Calculate estimated mission time including transit and overhead
+ * @param {number} totalDistance - Total path distance in meters
+ * @param {number} speed - Mission speed in m/s
+ * @returns {number} Estimated mission time in seconds
+ */
+export const calculateMissionTime = (totalDistance, speed) => {
+    if (!speed || speed <= 0) return TAKEOFF_LANDING_OVERHEAD;
+
+    const transitTime = totalDistance / speed;
+    const missionTime = transitTime + TAKEOFF_LANDING_OVERHEAD;
+
+    return Math.round(missionTime);
+};
+
+/**
+ * Determine flight warning level based on mission time vs max flight time
+ * @param {number} missionTimeSeconds - Estimated mission time in seconds
+ * @param {number} maxFlightTimeMinutes - Drone max flight time in minutes
+ * @returns {string} 'safe' | 'warning' | 'critical'
+ */
+export const getFlightWarningLevel = (missionTimeSeconds, maxFlightTimeMinutes) => {
+    if (!maxFlightTimeMinutes || maxFlightTimeMinutes <= 0) {
+        return 'safe'; // Custom drone or no limit
+    }
+
+    const maxFlightTimeSeconds = maxFlightTimeMinutes * 60;
+    const warningThreshold = maxFlightTimeSeconds * FLIGHT_WARNING_THRESHOLD;
+
+    if (missionTimeSeconds >= maxFlightTimeSeconds) {
+        return 'critical'; // Red - exceeds max flight time
+    } else if (missionTimeSeconds >= warningThreshold) {
+        return 'warning'; // Yellow - approaching limit (85%)
+    }
+
+    return 'safe'; // Green - within limits
+};
+

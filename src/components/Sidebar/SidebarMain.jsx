@@ -6,6 +6,8 @@ import { parseImport } from '../../utils/kmlImporter';
 import { Trash2, Undo, Redo, Download, Play, Upload, ChevronDown, ChevronUp, Settings, Camera, Map as MapIcon, Layers } from 'lucide-react';
 import * as turf from '@turf/turf';
 import DownloadDialog from '../Dialogs/DownloadDialog';
+import FlightWarningDialog from '../Dialogs/FlightWarningDialog';
+import { getDronePreset } from '../../utils/dronePresets';
 
 const Section = ({ title, icon: Icon, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -39,6 +41,10 @@ export default function SidebarMain({ currentPolygon }) {
   // Dialog state for KMZ download
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
 
+  // Flight warning dialog state
+  const [showFlightWarning, setShowFlightWarning] = useState(false);
+  const [hasShownWarning, setHasShownWarning] = useState({ warning: false, critical: false });
+
   const handleReset = () => {
     if (confirm("Are you sure you want to reset the mission? This will clear all waypoints and shapes.")) {
       resetMission();
@@ -48,7 +54,25 @@ export default function SidebarMain({ currentPolygon }) {
   const handleGenerate = () => {
     if (!currentPolygon) return alert("Draw a shape first!");
     const path = generatePhotogrammetryPath(currentPolygon, settings);
+
+    // Set waypoints first so we can calculate metrics
     setWaypoints(path);
+
+    // Calculate mission metrics and update waypoint speeds
+    setTimeout(() => {
+      const store = useMissionStore.getState();
+      store.calculateMissionMetrics();
+
+      // Update all waypoint speeds with calculated max speed
+      const { calculatedMaxSpeed } = store;
+      if (calculatedMaxSpeed > 0 && path.length > 0) {
+        const updatedPath = path.map(wp => ({
+          ...wp,
+          speed: calculatedMaxSpeed
+        }));
+        setWaypoints(updatedPath);
+      }
+    }, 100);
   };
 
   const handleFileUpload = async (e) => {
@@ -83,6 +107,9 @@ export default function SidebarMain({ currentPolygon }) {
         // Auto-zoom to fit all waypoints with a small delay
         setTimeout(() => {
           fitMapToWaypoints();
+          // Calculate mission metrics for imported waypoints
+          const store = useMissionStore.getState();
+          store.calculateMissionMetrics();
         }, 100);
       } else {
         alert("No waypoints found in file.");
@@ -504,12 +531,12 @@ export default function SidebarMain({ currentPolygon }) {
           <Play size={18} /> Generate Path
         </button>
 
-        <div className="flex gap-2">
-          <div className="flex-1 bg-white border rounded p-2 text-center">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-white border rounded p-2 text-center">
             <div className="text-xs text-gray-400 font-bold uppercase">Waypoints</div>
             <div className="font-bold text-gray-700">{waypoints.length}</div>
           </div>
-          <div className="flex-1 bg-white border rounded p-2 text-center">
+          <div className="bg-white border rounded p-2 text-center">
             <div className="text-xs text-gray-400 font-bold uppercase">Distance</div>
             <div className="font-bold text-gray-700">
               {waypoints.length >= 2
@@ -518,11 +545,41 @@ export default function SidebarMain({ currentPolygon }) {
               }
             </div>
           </div>
-          <div className="flex-1 bg-white border rounded p-2 text-center">
-            <div className="text-xs text-gray-400 font-bold uppercase">Time</div>
-            <div className="font-bold text-gray-700">
-              {waypoints.length >= 2
-                ? formatTime(calculateMissionTime(waypoints, settings.speed))
+          <div className="bg-white border rounded p-2 text-center">
+            <div className="text-xs text-gray-400 font-bold uppercase">Max Speed</div>
+            <div className="font-bold text-gray-700" title={`Based on ${Math.round(useMissionStore.getState().minSegmentDistance)}m minimum segment`}>
+              {waypoints.length >= 2 && useMissionStore.getState().calculatedMaxSpeed > 0
+                ? `${useMissionStore.getState().calculatedMaxSpeed.toFixed(1)} m/s`
+                : '0 m/s'
+              }
+            </div>
+          </div>
+          <div className="bg-white border rounded p-2 text-center">
+            <div className="text-xs text-gray-400 font-bold uppercase">Est. Time</div>
+            <div className={`font-bold ${(() => {
+              const level = useMissionStore.getState().getFlightWarningLevel();
+              if (level === 'critical') return 'text-red-500';
+              if (level === 'warning') return 'text-yellow-600';
+              return 'text-gray-700';
+            })()
+              }`}>
+              {waypoints.length >= 2 && useMissionStore.getState().calculatedMaxSpeed > 0
+                ? (() => {
+                  const missionTime = useMissionStore.getState().getMissionTime();
+                  const level = useMissionStore.getState().getFlightWarningLevel();
+                  const timeStr = formatTime(missionTime);
+                  const icon = level === 'critical' ? ' 🔴' : level === 'warning' ? ' ⚠️' : '';
+
+                  // Show warning dialog if first time seeing this level
+                  if (level !== 'safe' && !hasShownWarning[level]) {
+                    setTimeout(() => {
+                      setShowFlightWarning(true);
+                      setHasShownWarning(prev => ({ ...prev, [level]: true }));
+                    }, 500);
+                  }
+
+                  return <span title={`${missionTime}s total`}>{timeStr}{icon}</span>;
+                })()
                 : '0:00'
               }
             </div>
@@ -541,6 +598,16 @@ export default function SidebarMain({ currentPolygon }) {
         onDownload={handleDownloadConfirm}
         defaultFilename={getDefaultFilename()}
         defaultMissionEndAction={settings.missionEndAction}
+      />
+
+      {/* Flight Warning Dialog */}
+      <FlightWarningDialog
+        isOpen={showFlightWarning}
+        onClose={() => setShowFlightWarning(false)}
+        warningLevel={useMissionStore.getState().getFlightWarningLevel()}
+        missionTime={waypoints.length >= 2 ? formatTime(useMissionStore.getState().getMissionTime()) : '0:00'}
+        droneName={getDronePreset(settings.selectedDrone)?.name || 'Unknown Drone'}
+        maxFlightTime={getDronePreset(settings.selectedDrone)?.maxFlightTime || 0}
       />
     </div>
   );

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { bearing } from '@turf/turf';
 import mapboxgl from 'mapbox-gl';
+import { getDronePreset } from '../utils/dronePresets';
+import { calculateMaxSpeed, calculateMissionTime, getFlightWarningLevel, calculateDistance } from '../utils/geospatial';
 
 export const useMissionStore = create((set, get) => ({
   waypoints: [],
@@ -11,6 +13,10 @@ export const useMissionStore = create((set, get) => ({
 
   // Mission metadata
   currentMissionFilename: null,
+
+  // Calculated mission metrics
+  calculatedMaxSpeed: 0,
+  minSegmentDistance: 0,
 
   // History Stack
   past: [],
@@ -176,6 +182,47 @@ export const useMissionStore = create((set, get) => ({
   setMissionFilename: (filename) => set({ currentMissionFilename: filename }),
   clearMissionFilename: () => set({ currentMissionFilename: null }),
 
+  // Mission Metrics Calculation
+  calculateMissionMetrics: () => {
+    const { waypoints, settings } = get();
+    const dronePreset = getDronePreset(settings.selectedDrone);
+    const photoInterval = dronePreset?.photoInterval || 5.5;
+
+    const { maxSpeed, minDistance } = calculateMaxSpeed(waypoints, photoInterval);
+
+    set({
+      calculatedMaxSpeed: maxSpeed,
+      minSegmentDistance: minDistance
+    });
+  },
+
+  // Computed getters
+  getTotalDistance: () => {
+    const { waypoints } = get();
+    if (waypoints.length < 2) return 0;
+
+    let totalDistance = 0;
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      totalDistance += calculateDistance(waypoints[i], waypoints[i + 1]);
+    }
+    return totalDistance;
+  },
+
+  getMissionTime: () => {
+    const { calculatedMaxSpeed } = get();
+    const totalDistance = get().getTotalDistance();
+    return calculateMissionTime(totalDistance, calculatedMaxSpeed);
+  },
+
+  getFlightWarningLevel: () => {
+    const { settings } = get();
+    const missionTime = get().getMissionTime();
+    const dronePreset = getDronePreset(settings.selectedDrone);
+    const maxFlightTime = dronePreset?.maxFlightTime || null;
+
+    return getFlightWarningLevel(missionTime, maxFlightTime);
+  },
+
   // Reset Logic
   resetTrigger: 0,
   resetMission: () => set((state) => ({
@@ -184,6 +231,8 @@ export const useMissionStore = create((set, get) => ({
     past: [],
     future: [],
     currentMissionFilename: null,
+    calculatedMaxSpeed: 0,
+    minSegmentDistance: 0,
     resetTrigger: state.resetTrigger + 1
   }))
 }));
