@@ -9,6 +9,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import { useMissionStore } from '../../store/useMissionStore';
 import DragRectangleMode from '../../logic/DragRectangleMode';
+import DirectSelectRectangleMode from '../../logic/DirectSelectRectangleMode';
 import { calculateFootprint } from '../../utils/geospatial';
 import DrawToolbar from './DrawToolbar';
 
@@ -99,8 +100,6 @@ export default function MapContainer({ onPolygonDrawn }) {
       onPolygonDrawn(null);
     }
   }, [resetTrigger, onPolygonDrawn]);
-
-
 
   const [selectionBox, setSelectionBox] = useState(null);
   const [canDelete, setCanDelete] = useState(false);
@@ -200,7 +199,7 @@ export default function MapContainer({ onPolygonDrawn }) {
         ...MapboxDraw.modes,
         drag_circle: DragCircleMode,
         draw_rectangle: DragRectangleMode,
-        direct_select: DirectMode,
+        direct_select: DirectSelectRectangleMode,
         simple_select: SimpleSelectMode
       }
     });
