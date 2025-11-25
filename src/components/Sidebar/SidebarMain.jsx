@@ -108,25 +108,16 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
 
         // Restore Session Data (Settings + Polygon)
         if (sessionData) {
+          console.log("Restoring session data:", sessionData);
           if (sessionData.settings) {
             updateSettings(sessionData.settings);
           }
           if (sessionData.polygon && setCurrentPolygon) {
+            console.log("Dispatching restore-polygon event", sessionData.polygon);
             setCurrentPolygon(sessionData.polygon);
-            // We also need to add it to the map draw instance so it's editable
-            // This requires MapContainer to listen to 'currentPolygon' changes or expose a method
-            // But 'currentPolygon' in App.jsx is state from onPolygonDrawn.
-            // Passing it back down to MapContainer as a prop to "force draw" might be needed.
-            // For now, let's assume MapContainer will handle it if we pass it down?
-            // Wait, MapContainer calls onPolygonDrawn, it doesn't receive it as a prop to render.
-            // We need to trigger an update in MapContainer.
-            // Let's use a custom event or a store action?
-            // Or better: Add 'setExternalPolygon' to the store or context?
-            // Actually, MapContainer listens to nothing for polygon restoration right now.
-            // I need to implement a mechanism to restore the polygon on the map.
-            // I will emit a custom window event for simplicity, or add it to the store.
-            // Let's use a custom event "waygen:restore-polygon".
             window.dispatchEvent(new CustomEvent('waygen:restore-polygon', { detail: sessionData.polygon }));
+          } else {
+            console.warn("No polygon in session data or setCurrentPolygon missing", { polygon: sessionData.polygon, fn: !!setCurrentPolygon });
           }
           alert(`Imported ${newPoints.length} waypoints and restored session!`);
         } else {

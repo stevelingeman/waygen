@@ -462,18 +462,27 @@ export default function MapContainer({ onPolygonDrawn }) {
 
     // Listen for Polygon Restore Event
     const handleRestorePolygon = (e) => {
+      console.log("MapContainer received restore-polygon event", e.detail);
       const polygon = e.detail;
-      if (!polygon || !draw.current) return;
+      if (!polygon || !draw.current) {
+        console.error("Cannot restore polygon: Missing data or draw instance", { polygon, draw: !!draw.current });
+        return;
+      }
 
-      draw.current.deleteAll();
-      draw.current.add(polygon);
+      try {
+        draw.current.deleteAll();
+        const ids = draw.current.add(polygon);
+        console.log("Restored polygon with IDs:", ids);
 
-      // Update React state via callback
-      onPolygonDrawn(polygon);
+        // Update React state via callback
+        onPolygonDrawn(polygon);
 
-      // Fit bounds to polygon
-      const bbox = turf.bbox(polygon);
-      map.current.fitBounds(bbox, { padding: 50 });
+        // Fit bounds to polygon
+        const bbox = turf.bbox(polygon);
+        map.current.fitBounds(bbox, { padding: 50 });
+      } catch (err) {
+        console.error("Error adding polygon to draw:", err);
+      }
     };
     window.addEventListener('waygen:restore-polygon', handleRestorePolygon);
 
@@ -540,11 +549,7 @@ export default function MapContainer({ onPolygonDrawn }) {
         data: { type: 'FeatureCollection', features: [] }
       });
 
-      // Add Waypoints Layer - Waypoints should be ON TOP of everything (even draw layers?)
-      // Usually waypoints are interactive and should be accessible.
-      // If we put them below draw polygon, they might be hard to click if polygon has fill.
-      // But draw polygon fill is usually low opacity.
-      // Let's put waypoints on top of everything.
+      // Add Waypoints Layer
       map.current.addLayer({
         id: 'waypoints-symbol',
         type: 'symbol',
@@ -579,7 +584,7 @@ export default function MapContainer({ onPolygonDrawn }) {
           'text-halo-color': '#000000',
           'text-halo-width': 0.5
         }
-      }); // No beforeId, so it goes to top
+      });
 
       // Load Images
       const loadIcon = (name, url) => {
@@ -593,7 +598,6 @@ export default function MapContainer({ onPolygonDrawn }) {
       loadIcon('teardrop-selected', TEARDROP_SELECTED_IMAGE);
 
       // Force Initial Data Update
-      // This ensures waypoints and path are rendered if they exist before map load
       const currentWaypoints = useMissionStore.getState().waypoints;
       const currentSelectedIds = useMissionStore.getState().selectedIds;
 
@@ -637,52 +641,6 @@ export default function MapContainer({ onPolygonDrawn }) {
     };
 
   }, []);
-
-  // Force Layout Updates (Fix for HMR/Persisted Styles)
-  useEffect(() => {
-    if (!map.current || !map.current.getLayer('waypoints-symbol')) return;
-
-    map.current.setLayoutProperty('waypoints-symbol', 'text-offset', [0, 0]);
-    map.current.setLayoutProperty('waypoints-symbol', 'text-anchor', 'center');
-    map.current.setLayoutProperty('waypoints-symbol', 'icon-anchor', 'center');
-    map.current.setLayoutProperty('waypoints-symbol', 'text-rotation-alignment', 'viewport');
-  }, []);
-
-  // Update Waypoints Source & Path
-  useEffect(() => {
-    if (!map.current) return;
-
-    const wpSource = map.current.getSource('waypoints');
-    const pathSource = map.current.getSource('mission-path');
-
-    if (wpSource) {
-      const features = waypoints.map((wp, index) => ({
-        type: 'Feature',
-        properties: {
-          id: wp.id,
-          index: index + 1,
-          selected: selectedIds.includes(wp.id),
-          heading: wp.heading || 0
-        },
-        geometry: {
-          type: 'Point',
-          coordinates: [wp.lng, wp.lat]
-        }
-      }));
-      wpSource.setData({ type: 'FeatureCollection', features });
-    }
-
-    if (pathSource) {
-      const lineCoords = waypoints.map(wp => [wp.lng, wp.lat]);
-      pathSource.setData({
-        type: 'Feature',
-        geometry: {
-          type: 'LineString',
-          coordinates: lineCoords
-        }
-      });
-    }
-  }, [waypoints, selectedIds]);
 
   // Update Footprints
   useEffect(() => {

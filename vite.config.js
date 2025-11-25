@@ -10,9 +10,7 @@ export default defineConfig({
   define: {
     // REMOVED 'require' from here.
     // Keep 'process' as it is safe and often needed.
-    'process': { env: {}, argv: [] }
-  },
-  define: {
+    'process': { env: {}, argv: [] },
     global: 'window',
   },
   build: {
@@ -20,6 +18,16 @@ export default defineConfig({
     sourcemap: false,
     commonjsOptions: {
       transformMixedEsModules: true,
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          mapbox: ['mapbox-gl', '@mapbox/mapbox-gl-draw', '@mapbox/mapbox-gl-geocoder'],
+          turf: ['@turf/turf'],
+          utils: ['jszip', 'file-saver'],
+          vendor: ['react', 'react-dom', 'zustand', 'lucide-react']
+        }
+      }
     }
   },
   optimizeDeps: {
