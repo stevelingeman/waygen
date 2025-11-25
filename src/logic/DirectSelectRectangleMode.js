@@ -45,19 +45,23 @@ const DirectSelectRectangleMode = {
 
             // Only handle outer ring (index 0) and valid corner points (0-3)
             if (ringIndex === 0 && pointIndex >= 0 && pointIndex <= 3) {
-                // Get coordinates using proper Draw API
-                const coords = feature.getCoordinates();
-                if (!coords || !coords[0] || coords[0].length !== 5) {
+                const coordinates = feature.coordinates[0];
+
+                // Ensure it's a rectangle (5 points = 4 corners + close)
+                if (!coordinates || coordinates.length !== 5) {
                     return DirectMode.onDrag.call(this, state, e);
                 }
 
-                const coordinates = coords[0];
                 const lng = e.lngLat.lng;
                 const lat = e.lngLat.lat;
 
                 // Calculate opposite corner (0<->2, 1<->3)
                 const oppositeIndex = (pointIndex + 2) % 4;
                 const oppositePoint = coordinates[oppositeIndex];
+
+                if (!oppositePoint) {
+                    return DirectMode.onDrag.call(this, state, e);
+                }
 
                 // Calculate new bounding box
                 const minX = Math.min(lng, oppositePoint[0]);
@@ -74,8 +78,8 @@ const DirectSelectRectangleMode = {
                     [minX, maxY]  // Close
                 ];
 
-                // Update using proper Draw API
-                feature.setCoordinates([newCoords]);
+                // Use incomingCoords for internal update during drag
+                feature.incomingCoords([newCoords]);
                 return;
             }
         }
