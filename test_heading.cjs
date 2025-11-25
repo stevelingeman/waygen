@@ -39,10 +39,10 @@ const useMissionStore = create((set, get) => ({
             const lastIndex = updatedWaypoints.length - 1;
             const lastWp = updatedWaypoints[lastIndex];
             // Calculate bearing from last waypoint to new waypoint
-            const newHeading = bearing(
+            const newHeading = Math.round(bearing(
                 [lastWp.lng, lastWp.lat],
                 [newWp.lng, newWp.lat]
-            );
+            ));
             updatedWaypoints[lastIndex] = { ...lastWp, heading: newHeading };
             newWp.heading = newHeading;
         }
@@ -71,11 +71,17 @@ console.log("WP1 Heading (updated):", waypoints[0].heading);
 console.log("WP2 Heading:", waypoints[1].heading);
 
 // WP2 should inherit the NEW heading of WP1 (which is the bearing to WP2)
-// Expected: ~45
+// Expected: 45 (Rounded)
 // Actual (Current Bug): 0
 
-if (Math.abs(waypoints[1].heading - 45) < 1) {
+if (waypoints[1].heading === 45) {
     console.log("SUCCESS: Inherited Bearing (45)");
 } else {
     console.log("FAILURE: Expected 45, got " + waypoints[1].heading);
+}
+
+if (Number.isInteger(waypoints[1].heading)) {
+    console.log("SUCCESS: Heading is Integer");
+} else {
+    console.log("FAILURE: Heading is NOT Integer");
 }

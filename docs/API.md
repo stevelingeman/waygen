@@ -284,6 +284,14 @@ Get drone configuration by ID.
 #### `mapLegacyDroneId(legacyId): string`
 Map legacy drone IDs (e.g., 'dji_mini_4_pro') to new preset IDs.
 
+#### `getDroneIds(): Array<string>`
+Get all drone preset IDs.
+
+#### Constants
+- `FLIGHT_WARNING_THRESHOLD`: 0.85
+- `DEFAULT_PHOTO_INTERVAL`: 5.5
+- `TAKEOFF_LANDING_OVERHEAD`: 120
+
 ---
 
 ### units.js
@@ -295,6 +303,9 @@ Convert meters to target unit (metric/imperial).
 
 #### `toMetric(displayValue, units): number`
 Convert display value back to meters.
+
+#### Constants
+- `METERS_TO_FEET`: 3.28084
 
 ---
 

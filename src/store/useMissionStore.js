@@ -78,10 +78,10 @@ export const useMissionStore = create((set, get) => ({
       const lastIndex = updatedWaypoints.length - 1;
       const lastWp = updatedWaypoints[lastIndex];
       // Calculate bearing from last waypoint to new waypoint
-      const newHeading = bearing(
+      const newHeading = Math.round(bearing(
         [lastWp.lng, lastWp.lat],
         [newWp.lng, newWp.lat]
-      );
+      ));
       updatedWaypoints[lastIndex] = { ...lastWp, heading: newHeading };
       newWp.heading = newHeading;
     }

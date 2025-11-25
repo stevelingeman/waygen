@@ -32,7 +32,7 @@ function generateOrbitPath(polygonFeature, settings) {
     // Calculate heading: Point -> Center
     // Bearing from Point to Center is (angle + 180) % 360
     // But we want the drone to face center.
-    const heading = turf.bearing(pt, center);
+    const heading = Math.round(turf.bearing(pt, center));
 
     waypoints.push({
       id: crypto.randomUUID(),
@@ -222,7 +222,7 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
     if (i < waypoints.length - 1) {
       const start = turf.point([waypoints[i].lng, waypoints[i].lat]);
       const end = turf.point([waypoints[i + 1].lng, waypoints[i + 1].lat]);
-      waypoints[i].heading = turf.bearing(start, end);
+      waypoints[i].heading = Math.round(turf.bearing(start, end));
     } else {
       // Last point inherits the heading of the segment leading up to it
       if (i > 0) waypoints[i].heading = waypoints[i - 1].heading;
