@@ -218,9 +218,10 @@ export default function MapContainer({ onPolygonDrawn }) {
         useMissionStore.getState().updateSettings({ pathType: 'orbit', spacing: 10 });
       }
 
-      // 2. Handle Rectangle Creation (Optional: Tag it)
+      // 2. Handle Rectangle Creation
       if (draw.current.getMode() === 'draw_rectangle') {
-        // It's already a polygon, so path generator handles it fine.
+        draw.current.setFeatureProperty(feature.id, 'isRectangle', true);
+        feature.properties.isRectangle = true;
       }
 
       // 3. Check for "Accidental Large Circle" (Click vs Drag)
