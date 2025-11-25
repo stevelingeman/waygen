@@ -30,7 +30,7 @@ function App() {
 
         <MapContainer onPolygonDrawn={setCurrentPolygon} />
       </div>
-      <SidebarMain currentPolygon={currentPolygon} />
+      <SidebarMain currentPolygon={currentPolygon} setCurrentPolygon={setCurrentPolygon} />
     </div>
   );
 }

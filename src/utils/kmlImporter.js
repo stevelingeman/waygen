@@ -6,7 +6,7 @@ export const parseImport = async (file) => {
   if (file.name.toLowerCase().endsWith('.kml')) {
     const text = await file.text();
     const dom = new DOMParser().parseFromString(text, 'text/xml');
-    return kml(dom);
+    return { geojson: kml(dom), sessionData: null };
   }
 
   // 2. Handle KMZ files (zip)
@@ -108,7 +108,19 @@ export const parseImport = async (file) => {
           throw new Error("No features found in KML/WPML file.");
         }
 
-        return geoJSON;
+        // 4. Extract Session Data if available
+        let sessionData = null;
+        const sessionFile = zip.file("wpmz/waygen_session.json");
+        if (sessionFile) {
+          try {
+            const sessionText = await sessionFile.async("text");
+            sessionData = JSON.parse(sessionText);
+          } catch (err) {
+            console.warn("Failed to parse session data:", err);
+          }
+        }
+
+        return { geojson: geoJSON, sessionData };
       } else {
         throw new Error("No valid KML or WPML file found inside KMZ.");
       }

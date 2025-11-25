@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
-export const downloadKMZ = async (waypoints, settings, missionName = "MiniMission") => {
+export const downloadKMZ = async (waypoints, settings, filename = "MiniMission", sessionData = null) => {
   const zip = new JSZip();
   const now = Date.now();
   const { speed, straightenLegs, waypointAction, gimbalPitch, missionEndAction } = settings;
@@ -45,21 +45,6 @@ export const downloadKMZ = async (waypoints, settings, missionName = "MiniMissio
     let actionCount = 0;
 
     // 1. Gimbal Action (Always on first point, or if pitch changes)
-    // For now, we'll just use the effective pitch for the first point, 
-    // OR if it differs from the previous point (if we were tracking that).
-    // The original code only did it for the first point. 
-    // Let's stick to first point for global, but if it's a specific waypoint override, maybe we should apply it?
-    // Actually, if every waypoint has a pitch, we might want to apply it.
-    // But standard behavior is usually just set at start.
-    // Let's keep it simple: If it's the first point, set it. 
-    // If it's NOT the first point but has a specific override different from global, maybe set it?
-    // For safety/simplicity in this task, let's just use the effective pitch at the start.
-    // IMPROVEMENT: If we want dynamic gimbal, we should check if (i > 0 && wp.gimbalPitch !== prev.gimbalPitch).
-    // But let's stick to the requested scope: "Show ALL waypoint attributes". 
-    // If the user changes pitch on a waypoint, they expect the drone to pitch there.
-
-    // Let's try to be smart: Always add gimbal action if it's the first point.
-    // AND add it if the effective pitch is different from the previous effective pitch.
     const prevWp = i > 0 ? waypoints[i - 1] : null;
     const prevEffectivePitch = prevWp ? (prevWp.gimbalPitch !== undefined ? prevWp.gimbalPitch : gimbalPitch) : null;
 
@@ -190,6 +175,12 @@ export const downloadKMZ = async (waypoints, settings, missionName = "MiniMissio
   const wpmz = zip.folder("wpmz");
   wpmz.file("template.kml", templateXML);
   wpmz.file("waylines.wpml", waylinesXML);
+
+  // 3. Store Session Data (Settings + Polygon)
+  if (sessionData) {
+    wpmz.file("waygen_session.json", JSON.stringify(sessionData, null, 2));
+  }
+
   const content = await zip.generateAsync({ type: "blob" });
-  saveAs(content, `${missionName}.kmz`);
+  saveAs(content, `${filename}.kmz`);
 };

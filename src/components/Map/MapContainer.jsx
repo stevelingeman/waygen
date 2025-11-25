@@ -460,14 +460,42 @@ export default function MapContainer({ onPolygonDrawn }) {
     map.current.on('mouseleave', 'waypoints-symbol', onPointMouseLeave);
     map.current.on('mousedown', 'waypoints-symbol', onPointMouseDown);
 
+    // Listen for Polygon Restore Event
+    const handleRestorePolygon = (e) => {
+      const polygon = e.detail;
+      if (!polygon || !draw.current) return;
+
+      draw.current.deleteAll();
+      draw.current.add(polygon);
+
+      // Update React state via callback
+      onPolygonDrawn(polygon);
+
+      // Fit bounds to polygon
+      const bbox = turf.bbox(polygon);
+      map.current.fitBounds(bbox, { padding: 50 });
+    };
+    window.addEventListener('waygen:restore-polygon', handleRestorePolygon);
+
     map.current.on('load', () => {
+      // Find the first draw layer to insert before
+      // MapboxDraw layers usually start with 'gl-draw-'
+      const layers = map.current.getStyle().layers;
+      let firstDrawLayerId = null;
+      for (const layer of layers) {
+        if (layer.id.startsWith('gl-draw-')) {
+          firstDrawLayerId = layer.id;
+          break;
+        }
+      }
+
       // Add Mission Path Source
       map.current.addSource('mission-path', {
         type: 'geojson',
         data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
       });
 
-      // Add Mission Path Layer (Line)
+      // Add Mission Path Layer (Line) - Insert before draw layers
       map.current.addLayer({
         id: 'mission-path-line',
         type: 'line',
@@ -481,7 +509,7 @@ export default function MapContainer({ onPolygonDrawn }) {
           'line-width': 3,
           'line-opacity': 0.8
         }
-      });
+      }, firstDrawLayerId);
 
       // Add Footprints Source
       map.current.addSource('footprints', {
@@ -489,7 +517,7 @@ export default function MapContainer({ onPolygonDrawn }) {
         data: { type: 'FeatureCollection', features: [] }
       });
 
-      // Add Footprints Layer (Fill)
+      // Add Footprints Layer (Fill) - Insert before draw layers
       map.current.addLayer({
         id: 'footprints-fill',
         type: 'fill',
@@ -499,9 +527,9 @@ export default function MapContainer({ onPolygonDrawn }) {
           'fill-opacity': 0.15, // Low opacity for alpha stacking
           'fill-outline-color': 'rgba(0,0,0,0)' // No outline on fill
         }
-      });
+      }, firstDrawLayerId);
 
-      // Add Footprints Layer (Outline)
+      // Add Footprints Layer (Outline) - Insert before draw layers
       map.current.addLayer({
         id: 'footprints-outline',
         type: 'line',
@@ -515,7 +543,7 @@ export default function MapContainer({ onPolygonDrawn }) {
           'line-width': 1,
           'line-opacity': 0.6
         }
-      });
+      }, firstDrawLayerId);
 
       // Add Waypoints Source
       map.current.addSource('waypoints', {
@@ -523,7 +551,11 @@ export default function MapContainer({ onPolygonDrawn }) {
         data: { type: 'FeatureCollection', features: [] }
       });
 
-      // Add Waypoints Layer
+      // Add Waypoints Layer - Waypoints should be ON TOP of everything (even draw layers?)
+      // Usually waypoints are interactive and should be accessible.
+      // If we put them below draw polygon, they might be hard to click if polygon has fill.
+      // But draw polygon fill is usually low opacity.
+      // Let's put waypoints on top of everything.
       map.current.addLayer({
         id: 'waypoints-symbol',
         type: 'symbol',
@@ -558,7 +590,7 @@ export default function MapContainer({ onPolygonDrawn }) {
           'text-halo-color': '#000000',
           'text-halo-width': 0.5
         }
-      });
+      }); // No beforeId, so it goes to top
 
       // Load Images
       const loadIcon = (name, url) => {
@@ -610,6 +642,10 @@ export default function MapContainer({ onPolygonDrawn }) {
     };
 
     map.current.on('draw.modechange', updateMode);
+
+    return () => {
+      window.removeEventListener('waygen:restore-polygon', handleRestorePolygon);
+    };
 
   }, []);
 

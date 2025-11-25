@@ -33,7 +33,7 @@ const Section = ({ title, icon: Icon, children, defaultOpen = false }) => {
   );
 };
 
-export default function SidebarMain({ currentPolygon }) {
+export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
   const {
     waypoints, selectedIds, settings,
     setWaypoints, updateSelectedWaypoints, deleteSelectedWaypoints,
@@ -52,6 +52,7 @@ export default function SidebarMain({ currentPolygon }) {
   const handleReset = () => {
     if (confirm("Are you sure you want to reset the mission? This will clear all waypoints and shapes.")) {
       resetMission();
+      setCurrentPolygon(null); // Clear the polygon on map
     }
   };
 
@@ -86,7 +87,7 @@ export default function SidebarMain({ currentPolygon }) {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      const geojson = await parseImport(file);
+      const { geojson, sessionData } = await parseImport(file);
       const newPoints = [];
       geojson.features.forEach(f => {
         if (f.geometry.type === "Point") {
@@ -105,11 +106,36 @@ export default function SidebarMain({ currentPolygon }) {
       if (newPoints.length > 0) {
         setWaypoints(newPoints);
 
+        // Restore Session Data (Settings + Polygon)
+        if (sessionData) {
+          if (sessionData.settings) {
+            updateSettings(sessionData.settings);
+          }
+          if (sessionData.polygon && setCurrentPolygon) {
+            setCurrentPolygon(sessionData.polygon);
+            // We also need to add it to the map draw instance so it's editable
+            // This requires MapContainer to listen to 'currentPolygon' changes or expose a method
+            // But 'currentPolygon' in App.jsx is state from onPolygonDrawn.
+            // Passing it back down to MapContainer as a prop to "force draw" might be needed.
+            // For now, let's assume MapContainer will handle it if we pass it down?
+            // Wait, MapContainer calls onPolygonDrawn, it doesn't receive it as a prop to render.
+            // We need to trigger an update in MapContainer.
+            // Let's use a custom event or a store action?
+            // Or better: Add 'setExternalPolygon' to the store or context?
+            // Actually, MapContainer listens to nothing for polygon restoration right now.
+            // I need to implement a mechanism to restore the polygon on the map.
+            // I will emit a custom window event for simplicity, or add it to the store.
+            // Let's use a custom event "waygen:restore-polygon".
+            window.dispatchEvent(new CustomEvent('waygen:restore-polygon', { detail: sessionData.polygon }));
+          }
+          alert(`Imported ${newPoints.length} waypoints and restored session!`);
+        } else {
+          alert(`Imported ${newPoints.length} waypoints!`);
+        }
+
         // Extract and store filename (without extension)
         const filename = file.name.replace(/\.(kmz|kml)$/i, '');
         setMissionFilename(filename);
-
-        alert(`Imported ${newPoints.length} waypoints!`);
 
         // Auto-zoom to fit all waypoints with a small delay
         setTimeout(() => {
@@ -150,8 +176,14 @@ export default function SidebarMain({ currentPolygon }) {
     // Update mission end action in settings
     updateSettings({ missionEndAction });
 
-    // Download with custom filename
-    downloadKMZ(waypoints, settings, filename);
+    // Capture Session Data
+    const sessionData = {
+      settings: settings,
+      polygon: currentPolygon
+    };
+
+    // Download with custom filename and session data
+    downloadKMZ(waypoints, settings, filename, sessionData);
   };
 
   // Mission statistics calculations
