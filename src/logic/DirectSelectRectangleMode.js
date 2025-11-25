@@ -29,59 +29,43 @@ const DirectSelectRectangleMode = {
     },
 
     onDrag: function (state, e) {
-        console.log('[DirectSelectRectangleMode] onDrag called', {
-            featureId: state.featureId,
-            coordPath: state.coordPath
-        });
-
         const { featureId, coordPath } = state;
         const feature = this.getFeature(featureId);
 
-        console.log('[DirectSelectRectangleMode] Feature:', feature);
-        console.log('[DirectSelectRectangleMode] isRectangle:', this.isRectangle(feature));
-
         // Use helper to check if it's a rectangle
         if (!this.isRectangle(feature)) {
-            console.log('[DirectSelectRectangleMode] Not a rectangle, using default behavior');
             return DirectMode.onDrag.call(this, state, e);
         }
 
-        console.log('[DirectSelectRectangleMode] IS a rectangle, applying custom logic');
-
-        // If dragging a point (coordPath is like "0.0", "0.1", etc.)
+        // If dragging a VERTEX (coordPath exists like "0.0", "0.1", etc.)
         if (coordPath) {
             const parts = coordPath.split('.');
             const ringIndex = parseInt(parts[0], 10);
             const pointIndex = parseInt(parts[1], 10);
 
-            console.log('[DirectSelectRectangleMode] Dragging vertex:', { ringIndex, pointIndex });
-
-            // Only handle outer ring (index 0) and valid points
-            if (ringIndex === 0 && !isNaN(pointIndex)) {
-                const coordinates = feature.coordinates[0];
-
-                console.log('[DirectSelectRectangleMode] Current coordinates:', coordinates);
-
-                // Ensure it's a rectangle (5 points = 4 corners + close)
-                if (coordinates.length !== 5) {
-                    console.log('[DirectSelectRectangleMode] Not 5 points, fallback');
+            // Only handle outer ring (index 0) and valid corner points (0-3)
+            if (ringIndex === 0 && pointIndex >= 0 && pointIndex <= 3) {
+                // Get coordinates using proper Draw API
+                const coords = feature.getCoordinates();
+                if (!coords || !coords[0] || coords[0].length !== 5) {
                     return DirectMode.onDrag.call(this, state, e);
                 }
 
+                const coordinates = coords[0];
                 const lng = e.lngLat.lng;
                 const lat = e.lngLat.lat;
 
-                // Calculate opposite index (0<->2, 1<->3)
+                // Calculate opposite corner (0<->2, 1<->3)
                 const oppositeIndex = (pointIndex + 2) % 4;
                 const oppositePoint = coordinates[oppositeIndex];
 
-                // New BBox
+                // Calculate new bounding box
                 const minX = Math.min(lng, oppositePoint[0]);
                 const maxX = Math.max(lng, oppositePoint[0]);
                 const minY = Math.min(lat, oppositePoint[1]);
                 const maxY = Math.max(lat, oppositePoint[1]);
 
-                // Reconstruct rectangle (always TL, TR, BR, BL order)
+                // Reconstruct rectangle
                 const newCoords = [
                     [minX, maxY], // TL
                     [maxX, maxY], // TR
@@ -90,14 +74,13 @@ const DirectSelectRectangleMode = {
                     [minX, maxY]  // Close
                 ];
 
-                console.log('[DirectSelectRectangleMode] New coordinates:', newCoords);
-                feature.incomingCoords([newCoords]);
+                // Update using proper Draw API
+                feature.setCoordinates([newCoords]);
                 return;
             }
         }
 
-        console.log('[DirectSelectRectangleMode] No coordPath or invalid, fallback');
-        // Fallback
+        // For anything else (body dragging, etc), use default behavior
         DirectMode.onDrag.call(this, state, e);
     },
 
@@ -108,7 +91,7 @@ const DirectSelectRectangleMode = {
             // Hide midpoints for rectangles to prevent adding vertices
             if (geojson.properties.meta === 'midpoint') return;
         }
-        // Use parent display logic
+        // Use parent display logic to show vertices
         DirectMode.toDisplayFeatures.call(this, state, geojson, display);
     }
 };
