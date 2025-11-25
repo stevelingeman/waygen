@@ -609,6 +609,30 @@ export default function MapContainer({ onPolygonDrawn }) {
 
     map.current.on('draw.modechange', updateMode);
 
+    // Global Escape Key Listener
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        // If we are in a drawing mode or add_waypoint, switch to simple_select
+        if (currentModeRef.current !== 'simple_select') {
+          // If in Mapbox Draw mode, we might need to cancel the current feature first.
+          // Mapbox Draw handles Escape internally to cancel, but we want to ensure we exit the mode too.
+          if (draw.current) {
+            draw.current.changeMode('simple_select');
+          }
+          setCurrentMode('simple_select');
+        } else {
+          // If already in simple_select, maybe deselect?
+          setSelectedIds([]);
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+
   }, []);
 
   // Centralized Mode Management
