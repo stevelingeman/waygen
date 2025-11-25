@@ -3,15 +3,37 @@ import { DirectMode } from 'mapbox-gl-draw-circle';
 const DirectSelectRectangleMode = {
     ...DirectMode,
 
+    isRectangle: function (feature) {
+        // 1. Check explicit property
+        if (feature && feature.properties && (feature.properties.isRectangle === true || feature.properties.isRectangle === 'true')) {
+            return true;
+        }
+
+        // 2. Geometric Check: Is it an axis-aligned rectangle?
+        if (feature && feature.geometry && feature.geometry.type === 'Polygon' && feature.geometry.coordinates.length > 0) {
+            const coords = feature.geometry.coordinates[0];
+            // Must have 5 points (4 corners + close)
+            if (coords.length !== 5) return false;
+
+            // Check axis alignment (allow small epsilon for floating point)
+            const xs = coords.slice(0, 4).map(p => p[0]);
+            const ys = coords.slice(0, 4).map(p => p[1]);
+
+            const uniqueXs = new Set(xs.map(x => x.toFixed(5))).size;
+            const uniqueYs = new Set(ys.map(y => y.toFixed(5))).size;
+
+            // If it's a rectangle, we should have exactly 2 unique X's and 2 unique Y's
+            return uniqueXs <= 2 && uniqueYs <= 2;
+        }
+        return false;
+    },
+
     onDrag: function (state, e) {
         const { featureId, coordPath } = state;
         const feature = this.getFeature(featureId);
 
-        // If not a rectangle, use Circle DirectMode behavior
-        // Check for boolean true or string "true" (just in case of serialization issues)
-        const isRect = feature && feature.properties && (feature.properties.isRectangle === true || feature.properties.isRectangle === 'true');
-
-        if (!isRect) {
+        // Use helper to check if it's a rectangle
+        if (!this.isRectangle(feature)) {
             return DirectMode.onDrag.call(this, state, e);
         }
 
@@ -63,9 +85,8 @@ const DirectSelectRectangleMode = {
 
     toDisplayFeatures: function (state, geojson, display) {
         const feature = this.getFeature(state.featureId);
-        const isRect = feature && feature.properties && (feature.properties.isRectangle === true || feature.properties.isRectangle === 'true');
 
-        if (isRect) {
+        if (this.isRectangle(feature)) {
             // Hide midpoints for rectangles to prevent adding vertices
             if (geojson.properties.meta === 'midpoint') return;
         }
