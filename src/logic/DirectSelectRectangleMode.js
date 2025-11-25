@@ -8,7 +8,10 @@ const DirectSelectRectangleMode = {
         const feature = this.getFeature(featureId);
 
         // If not a rectangle, use Circle DirectMode behavior
-        if (!feature.properties.isRectangle) {
+        // Check for boolean true or string "true" (just in case of serialization issues)
+        const isRect = feature && feature.properties && (feature.properties.isRectangle === true || feature.properties.isRectangle === 'true');
+
+        if (!isRect) {
             return DirectMode.onDrag.call(this, state, e);
         }
 
@@ -60,7 +63,9 @@ const DirectSelectRectangleMode = {
 
     toDisplayFeatures: function (state, geojson, display) {
         const feature = this.getFeature(state.featureId);
-        if (feature.properties.isRectangle) {
+        const isRect = feature && feature.properties && (feature.properties.isRectangle === true || feature.properties.isRectangle === 'true');
+
+        if (isRect) {
             // Hide midpoints for rectangles to prevent adding vertices
             if (geojson.properties.meta === 'midpoint') return;
         }

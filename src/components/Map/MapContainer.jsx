@@ -219,7 +219,9 @@ export default function MapContainer({ onPolygonDrawn }) {
       }
 
       // 2. Handle Rectangle Creation
-      if (draw.current.getMode() === 'draw_rectangle') {
+      // Check if it comes from DragRectangleMode (which sets isRectangle: true)
+      // or if we are currently in the mode (handling race conditions)
+      if (feature.properties.isRectangle || draw.current.getMode() === 'draw_rectangle') {
         draw.current.setFeatureProperty(feature.id, 'isRectangle', true);
         feature.properties.isRectangle = true;
       }
