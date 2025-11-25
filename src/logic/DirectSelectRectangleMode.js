@@ -29,13 +29,24 @@ const DirectSelectRectangleMode = {
     },
 
     onDrag: function (state, e) {
+        console.log('[DirectSelectRectangleMode] onDrag called', {
+            featureId: state.featureId,
+            coordPath: state.coordPath
+        });
+
         const { featureId, coordPath } = state;
         const feature = this.getFeature(featureId);
 
+        console.log('[DirectSelectRectangleMode] Feature:', feature);
+        console.log('[DirectSelectRectangleMode] isRectangle:', this.isRectangle(feature));
+
         // Use helper to check if it's a rectangle
         if (!this.isRectangle(feature)) {
+            console.log('[DirectSelectRectangleMode] Not a rectangle, using default behavior');
             return DirectMode.onDrag.call(this, state, e);
         }
+
+        console.log('[DirectSelectRectangleMode] IS a rectangle, applying custom logic');
 
         // If dragging a point (coordPath is like "0.0", "0.1", etc.)
         if (coordPath) {
@@ -43,12 +54,17 @@ const DirectSelectRectangleMode = {
             const ringIndex = parseInt(parts[0], 10);
             const pointIndex = parseInt(parts[1], 10);
 
+            console.log('[DirectSelectRectangleMode] Dragging vertex:', { ringIndex, pointIndex });
+
             // Only handle outer ring (index 0) and valid points
             if (ringIndex === 0 && !isNaN(pointIndex)) {
                 const coordinates = feature.coordinates[0];
 
+                console.log('[DirectSelectRectangleMode] Current coordinates:', coordinates);
+
                 // Ensure it's a rectangle (5 points = 4 corners + close)
                 if (coordinates.length !== 5) {
+                    console.log('[DirectSelectRectangleMode] Not 5 points, fallback');
                     return DirectMode.onDrag.call(this, state, e);
                 }
 
@@ -74,11 +90,13 @@ const DirectSelectRectangleMode = {
                     [minX, maxY]  // Close
                 ];
 
+                console.log('[DirectSelectRectangleMode] New coordinates:', newCoords);
                 feature.incomingCoords([newCoords]);
                 return;
             }
         }
 
+        console.log('[DirectSelectRectangleMode] No coordPath or invalid, fallback');
         // Fallback
         DirectMode.onDrag.call(this, state, e);
     },
