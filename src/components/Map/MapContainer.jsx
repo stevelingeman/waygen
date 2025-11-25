@@ -486,108 +486,12 @@ export default function MapContainer({ onPolygonDrawn }) {
     };
     window.addEventListener('waygen:restore-polygon', handleRestorePolygon);
 
-    map.current.on('load', () => {
-      // Add Mission Path Source
-      map.current.addSource('mission-path', {
-        type: 'geojson',
-        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
-      });
-
-      // Add Mission Path Layer (Line)
-      map.current.addLayer({
-        id: 'mission-path-line',
-        type: 'line',
-        source: 'mission-path',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': '#3b82f6',
-          'line-width': 3,
-          'line-opacity': 0.8
-        }
-      });
-
-      // Add Footprints Source
-      map.current.addSource('footprints', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] }
-      });
-
-      // Add Footprints Layer (Fill)
-      map.current.addLayer({
-        id: 'footprints-fill',
-        type: 'fill',
-        source: 'footprints',
-        paint: {
-          'fill-color': ['get', 'color'], // Get color from feature properties
-          'fill-opacity': 0.15, // Low opacity for alpha stacking
-          'fill-outline-color': 'rgba(0,0,0,0)' // No outline on fill
-        }
-      });
-
-      // Add Footprints Layer (Outline)
-      map.current.addLayer({
-        id: 'footprints-outline',
-        type: 'line',
-        source: 'footprints',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': ['get', 'color'], // Get color from feature properties
-          'line-width': 1,
-          'line-opacity': 0.6
-        }
-      });
-
-      // Add Waypoints Source
-      map.current.addSource('waypoints', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] }
-      });
-
-      // Add Waypoints Layer
-      map.current.addLayer({
-        id: 'waypoints-symbol',
-        type: 'symbol',
-        source: 'waypoints',
-        layout: {
-          'icon-image': ['case', ['get', 'selected'], 'teardrop-selected', 'teardrop'],
-          'icon-size': [
-            'interpolate', ['linear'], ['zoom'],
-            10, 0.5,
-            15, 0.75,
-            20, 1
-          ],
-          'icon-anchor': 'center',
-          'icon-allow-overlap': true,
-          'icon-rotate': ['get', 'heading'],
-          'icon-rotation-alignment': 'map',
-          'text-field': ['to-string', ['get', 'index']],
-          'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-          'text-size': [
-            'interpolate', ['linear'], ['zoom'],
-            10, 9,
-            15, 11,
-            20, 13
-          ],
-          'text-offset': [0, 0],
-          'text-anchor': 'center',
-          'text-allow-overlap': true,
-          'text-rotation-alignment': 'viewport'
-        },
-        paint: {
-          'text-color': '#ffffff',
-          'text-halo-color': '#000000',
-          'text-halo-width': 0.5
-        }
-      });
+    const initializeLayers = () => {
+      console.log("Initializing Map Layers...");
 
       // Load Images
       const loadIcon = (name, url) => {
+        if (map.current.hasImage(name)) return;
         const img = new Image();
         img.src = url;
         img.onload = () => {
@@ -597,11 +501,109 @@ export default function MapContainer({ onPolygonDrawn }) {
       loadIcon('teardrop', TEARDROP_IMAGE);
       loadIcon('teardrop-selected', TEARDROP_SELECTED_IMAGE);
 
+      // Add Sources
+      if (!map.current.getSource('mission-path')) {
+        map.current.addSource('mission-path', {
+          type: 'geojson',
+          data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
+        });
+      }
+
+      if (!map.current.getSource('footprints')) {
+        map.current.addSource('footprints', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: [] }
+        });
+      }
+
+      if (!map.current.getSource('waypoints')) {
+        map.current.addSource('waypoints', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: [] }
+        });
+      }
+
+      // Add Layers (Order matters: Bottom to Top)
+
+      // 1. Footprints (Fill)
+      if (!map.current.getLayer('footprints-fill')) {
+        map.current.addLayer({
+          id: 'footprints-fill',
+          type: 'fill',
+          source: 'footprints',
+          paint: {
+            'fill-color': ['get', 'color'],
+            'fill-opacity': 0.15,
+            'fill-outline-color': 'rgba(0,0,0,0)'
+          }
+        });
+      }
+
+      // 2. Footprints (Outline)
+      if (!map.current.getLayer('footprints-outline')) {
+        map.current.addLayer({
+          id: 'footprints-outline',
+          type: 'line',
+          source: 'footprints',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': 1,
+            'line-opacity': 0.6
+          }
+        });
+      }
+
+      // 3. Mission Path
+      if (!map.current.getLayer('mission-path-line')) {
+        map.current.addLayer({
+          id: 'mission-path-line',
+          type: 'line',
+          source: 'mission-path',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': '#3b82f6',
+            'line-width': 3,
+            'line-opacity': 0.8
+          }
+        });
+      }
+
+      // 4. Waypoints (Symbol) - Should be on top
+      if (!map.current.getLayer('waypoints-symbol')) {
+        map.current.addLayer({
+          id: 'waypoints-symbol',
+          type: 'symbol',
+          source: 'waypoints',
+          layout: {
+            'icon-image': ['case', ['get', 'selected'], 'teardrop-selected', 'teardrop'],
+            'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.5, 15, 0.75, 20, 1],
+            'icon-anchor': 'center',
+            'icon-allow-overlap': true,
+            'icon-rotate': ['get', 'heading'],
+            'icon-rotation-alignment': 'map',
+            'text-field': ['to-string', ['get', 'index']],
+            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+            'text-size': ['interpolate', ['linear'], ['zoom'], 10, 9, 15, 11, 20, 13],
+            'text-offset': [0, 0],
+            'text-anchor': 'center',
+            'text-allow-overlap': true,
+            'text-rotation-alignment': 'viewport'
+          },
+          paint: {
+            'text-color': '#ffffff',
+            'text-halo-color': '#000000',
+            'text-halo-width': 0.5
+          }
+        });
+      }
+
       // Force Initial Data Update
       const currentWaypoints = useMissionStore.getState().waypoints;
       const currentSelectedIds = useMissionStore.getState().selectedIds;
 
       if (currentWaypoints.length > 0) {
+        console.log("Initial waypoints found, updating source...", currentWaypoints.length);
         const features = currentWaypoints.map((wp, index) => ({
           type: 'Feature',
           properties: {
@@ -623,7 +625,13 @@ export default function MapContainer({ onPolygonDrawn }) {
           geometry: { type: 'LineString', coordinates: lineCoords }
         });
       }
-    });
+    };
+
+    if (map.current.loaded()) {
+      initializeLayers();
+    } else {
+      map.current.on('load', initializeLayers);
+    }
 
     const updateMode = (e) => {
       setCurrentMode(e.mode);
