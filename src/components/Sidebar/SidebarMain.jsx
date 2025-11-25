@@ -9,6 +9,7 @@ import DownloadDialog from '../Dialogs/DownloadDialog';
 import FlightWarningDialog from '../Dialogs/FlightWarningDialog';
 import { getDronePreset } from '../../utils/dronePresets';
 import { toDisplay, toMetric } from '../../utils/units';
+import { calculateMaxSpeed } from '../../utils/geospatial';
 import EditSelectedPanel from './EditSelectedPanel';
 
 const Section = ({ title, icon: Icon, children, defaultOpen = false }) => {
@@ -56,26 +57,29 @@ export default function SidebarMain({ currentPolygon }) {
 
   const handleGenerate = () => {
     if (!currentPolygon) return alert("Draw a shape first!");
-    const path = generatePhotogrammetryPath(currentPolygon, settings);
 
-    // Set waypoints first so we can calculate metrics
-    setWaypoints(path);
+    // Step 1: Generate initial path to get waypoint geometry
+    const initialPath = generatePhotogrammetryPath(currentPolygon, settings);
 
-    // Calculate mission metrics and update waypoint speeds
+    // Step 2: Calculate max safe speed based on photo interval
+    const dronePreset = getDronePreset(settings.selectedDrone);
+    const photoInterval = dronePreset?.photoInterval || 5.5;
+    const { maxSpeed } = calculateMaxSpeed(initialPath, photoInterval);
+
+    // Step 3: Regenerate path with calculated speed
+    const settingsWithSpeed = {
+      ...settings,
+      speed: maxSpeed > 0 ? maxSpeed : settings.speed
+    };
+    const finalPath = generatePhotogrammetryPath(currentPolygon, settingsWithSpeed);
+
+    // Step 4: Set waypoints and update metrics
+    setWaypoints(finalPath);
+
+    // Update metrics in store
     setTimeout(() => {
-      const store = useMissionStore.getState();
-      store.calculateMissionMetrics();
-
-      // Update all waypoint speeds with calculated max speed
-      const { calculatedMaxSpeed } = store;
-      if (calculatedMaxSpeed > 0 && path.length > 0) {
-        const updatedPath = path.map(wp => ({
-          ...wp,
-          speed: calculatedMaxSpeed
-        }));
-        setWaypoints(updatedPath);
-      }
-    }, 100);
+      useMissionStore.getState().calculateMissionMetrics();
+    }, 50);
   };
 
   const handleFileUpload = async (e) => {
