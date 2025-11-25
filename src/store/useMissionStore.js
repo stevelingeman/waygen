@@ -83,6 +83,7 @@ export const useMissionStore = create((set, get) => ({
         [newWp.lng, newWp.lat]
       );
       updatedWaypoints[lastIndex] = { ...lastWp, heading: newHeading };
+      newWp.heading = newHeading;
     }
 
     return {
