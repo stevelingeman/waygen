@@ -5,12 +5,15 @@ import commonjs from 'vite-plugin-commonjs'
 export default defineConfig({
   plugins: [
     react(),
-    commonjs() 
+    commonjs()
   ],
   define: {
     // REMOVED 'require' from here.
     // Keep 'process' as it is safe and often needed.
     'process': { env: {}, argv: [] }
+  },
+  define: {
+    global: 'window',
   },
   build: {
     outDir: 'dist',

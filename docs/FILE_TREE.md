@@ -1,17 +1,15 @@
 # PROJECT FILE STRUCTURE
 .
 ├── README.md
-├── SIDEBAR_INTEGRATION_GUIDE.md
 ├── SPECS.md
-├── SPECS_KMZ_ENHANCEMENTS.md
-├── SPECS_SPEED_CALCULATION.md
+├── TRIAGE.md
 ├── index.html
 ├── package.json
 ├── postcss.config.js
 ├── tailwind.config.js
 ├── vite.config.js
-├── public/
-│   └── vite.svg
+├── .env.local
+├── .gitignore
 ├── docs/
 │   ├── API.md
 │   ├── ARCHITECTURE.md

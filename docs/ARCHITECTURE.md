@@ -114,26 +114,26 @@ Waygen follows a **React-based component architecture** with unidirectional data
   
   // Global Settings
   settings: {
-    altitude: number,
-    speed: number,
-    gimbalPitch: number,
-    customFOV: number,
-    showFootprints: boolean,
-    footprintColor: string,
-    sideOverlap: number,
-    frontOverlap: number,
-    pathType: 'grid' | 'orbit',
-    angle: number,
-    autoDirection: boolean,
-    generateEveryPoint: boolean,
-    reversePath: boolean,
-    waypointAction: 'none' | 'photo' | 'hover',
-    photoInterval: number,
-    selectedDrone: string,
-    straightenLegs: boolean,
-    units: 'metric' | 'imperial',
-    orbitRadius: number,
-    missionEndAction: 'goHome' | 'autoLand'
+    altitude: 60,
+    speed: 10,
+    gimbalPitch: -90,
+    customFOV: 82.1,
+    showFootprints: false,
+    footprintColor: '#22c55e',
+    sideOverlap: 70,
+    frontOverlap: 80,
+    pathType: 'grid',
+    angle: 0,
+    autoDirection: false,
+    generateEveryPoint: false,
+    reversePath: false,
+    waypointAction: 'none',
+    photoInterval: 2,
+    selectedDrone: 'dji_mini_5_pro',
+    straightenLegs: false,
+    units: 'metric',
+    orbitRadius: 50,
+    missionEndAction: 'goHome'
   },
   
   // Metrics
@@ -218,4 +218,4 @@ Waygen follows a **React-based component architecture** with unidirectional data
 
 ---
 
-**Last Updated**: 2025-11-24
+**Last Updated**: 2025-11-25

@@ -3,7 +3,7 @@ import * as turf from '@turf/turf';
 // ... (existing imports)
 
 function generateOrbitPath(polygonFeature, settings) {
-  const { altitude, speed, gimbalPitch, spacing } = settings;
+  const { altitude, speed, gimbalPitch, spacing, straightenLegs, waypointAction } = settings;
 
   // 1. Calculate Center and Radius
   const center = turf.centroid(polygonFeature);
@@ -41,7 +41,9 @@ function generateOrbitPath(polygonFeature, settings) {
       altitude: Number(altitude),
       speed: Number(speed),
       gimbalPitch: Number(gimbalPitch),
-      heading: heading
+      heading: heading,
+      straightenLegs: straightenLegs,
+      action: waypointAction
     });
   }
 
@@ -61,7 +63,7 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
     return generateOrbitPath(polygonFeature, settings);
   }
 
-  const { altitude, sideOverlap, frontOverlap, angle, gimbalPitch, autoDirection, generateEveryPoint, reversePath, speed } = settings;
+  const { altitude, sideOverlap, frontOverlap, angle, gimbalPitch, autoDirection, generateEveryPoint, reversePath, speed, straightenLegs, waypointAction } = settings;
   // ... (rest of existing grid logic)
   // 1. Calculate Line Spacing in METERS
   // Use customFOV from settings (defaulting to 82.1 if missing)
@@ -192,7 +194,9 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
         altitude: Number(altitude),
         speed: Number(speed),
         gimbalPitch: Number(gimbalPitch),
-        heading: 0
+        heading: 0,
+        straightenLegs: straightenLegs,
+        action: waypointAction
       });
     });
   });
