@@ -478,24 +478,13 @@ export default function MapContainer({ onPolygonDrawn }) {
     window.addEventListener('waygen:restore-polygon', handleRestorePolygon);
 
     map.current.on('load', () => {
-      // Find the first draw layer to insert before
-      // MapboxDraw layers usually start with 'gl-draw-'
-      const layers = map.current.getStyle().layers;
-      let firstDrawLayerId = null;
-      for (const layer of layers) {
-        if (layer.id.startsWith('gl-draw-')) {
-          firstDrawLayerId = layer.id;
-          break;
-        }
-      }
-
       // Add Mission Path Source
       map.current.addSource('mission-path', {
         type: 'geojson',
         data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
       });
 
-      // Add Mission Path Layer (Line) - Insert before draw layers
+      // Add Mission Path Layer (Line)
       map.current.addLayer({
         id: 'mission-path-line',
         type: 'line',
@@ -509,7 +498,7 @@ export default function MapContainer({ onPolygonDrawn }) {
           'line-width': 3,
           'line-opacity': 0.8
         }
-      }, firstDrawLayerId);
+      });
 
       // Add Footprints Source
       map.current.addSource('footprints', {
@@ -517,7 +506,7 @@ export default function MapContainer({ onPolygonDrawn }) {
         data: { type: 'FeatureCollection', features: [] }
       });
 
-      // Add Footprints Layer (Fill) - Insert before draw layers
+      // Add Footprints Layer (Fill)
       map.current.addLayer({
         id: 'footprints-fill',
         type: 'fill',
@@ -527,9 +516,9 @@ export default function MapContainer({ onPolygonDrawn }) {
           'fill-opacity': 0.15, // Low opacity for alpha stacking
           'fill-outline-color': 'rgba(0,0,0,0)' // No outline on fill
         }
-      }, firstDrawLayerId);
+      });
 
-      // Add Footprints Layer (Outline) - Insert before draw layers
+      // Add Footprints Layer (Outline)
       map.current.addLayer({
         id: 'footprints-outline',
         type: 'line',
@@ -543,7 +532,7 @@ export default function MapContainer({ onPolygonDrawn }) {
           'line-width': 1,
           'line-opacity': 0.6
         }
-      }, firstDrawLayerId);
+      });
 
       // Add Waypoints Source
       map.current.addSource('waypoints', {
