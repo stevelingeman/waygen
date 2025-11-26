@@ -77,7 +77,7 @@ const simpleStyles = [
   }
 ];
 
-export default function MapContainer({ onPolygonDrawn }) {
+export default function MapContainer({ onPolygonDrawn, polygon }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const draw = useRef(null);
@@ -271,7 +271,7 @@ export default function MapContainer({ onPolygonDrawn }) {
         onPolygonDrawn(e.features[0]);
         setCanDelete(true);
       } else {
-        onPolygonDrawn(null);
+        // onPolygonDrawn(null); // Do not clear polygon on deselect
         setCanDelete(false);
       }
     });
@@ -460,31 +460,7 @@ export default function MapContainer({ onPolygonDrawn }) {
     map.current.on('mouseleave', 'waypoints-symbol', onPointMouseLeave);
     map.current.on('mousedown', 'waypoints-symbol', onPointMouseDown);
 
-    // Listen for Polygon Restore Event
-    const handleRestorePolygon = (e) => {
-      console.log("MapContainer received restore-polygon event", e.detail);
-      const polygon = e.detail;
-      if (!polygon || !draw.current) {
-        console.error("Cannot restore polygon: Missing data or draw instance", { polygon, draw: !!draw.current });
-        return;
-      }
-
-      try {
-        draw.current.deleteAll();
-        const ids = draw.current.add(polygon);
-        console.log("Restored polygon with IDs:", ids);
-
-        // Update React state via callback
-        onPolygonDrawn(polygon);
-
-        // Fit bounds to polygon
-        const bbox = turf.bbox(polygon);
-        map.current.fitBounds(bbox, { padding: 50 });
-      } catch (err) {
-        console.error("Error adding polygon to draw:", err);
-      }
-    };
-    window.addEventListener('waygen:restore-polygon', handleRestorePolygon);
+    // Removed legacy restore-polygon listener in favor of prop-based sync
 
     const initializeLayers = () => {
       console.log("Initializing Map Layers...");
@@ -665,8 +641,8 @@ export default function MapContainer({ onPolygonDrawn }) {
 
     // Cleanup
     return () => {
-      window.removeEventListener('waygen:restore-polygon', handleRestorePolygon);
       window.removeEventListener('keydown', onKeyDown);
+      // window.removeEventListener('waygen:restore-polygon', handleRestorePolygon); // Removed
     };
 
   }, []);
@@ -713,7 +689,9 @@ export default function MapContainer({ onPolygonDrawn }) {
   // Update Waypoints Source & Path
   useEffect(() => {
     if (!map.current) return;
-    if (!map.current.loaded()) return; // Added check for safety
+    if (!map.current) return;
+    // Removed loaded() check to ensure data updates even if map is "loading" (e.g. tiles/movement)
+
 
     const wpSource = map.current.getSource('waypoints');
     const pathSource = map.current.getSource('mission-path');
@@ -790,6 +768,37 @@ export default function MapContainer({ onPolygonDrawn }) {
       setCanDelete(false);
     }
   };
+
+  // Sync Polygon Prop with Mapbox Draw
+  useEffect(() => {
+    if (!draw.current || !map.current) return;
+
+    // If prop is null, clear draw
+    if (!polygon) {
+      if (draw.current.getAll().features.length > 0) {
+        draw.current.deleteAll();
+      }
+      return;
+    }
+
+    // Check if we need to update (avoid loops)
+    const currentFeatures = draw.current.getAll().features;
+    const alreadyExists = currentFeatures.some(f => f.id === polygon.id);
+
+    if (!alreadyExists) {
+      console.log("Syncing polygon from prop:", polygon);
+      draw.current.deleteAll();
+      draw.current.add(polygon);
+
+      // Fit bounds for new polygon (e.g. import)
+      try {
+        const bbox = turf.bbox(polygon);
+        map.current.fitBounds(bbox, { padding: 100 });
+      } catch (err) {
+        console.warn("Could not fit bounds:", err);
+      }
+    }
+  }, [polygon]);
 
   return (
     <div className={`relative w-full h-full ${currentMode === 'add_waypoint' ? 'force-crosshair' : ''}`}>

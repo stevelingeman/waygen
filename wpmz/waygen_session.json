@@ -1,0 +1,58 @@
+{
+    "settings": {
+        "altitude": 50,
+        "speed": 10,
+        "gimbalPitch": -90,
+        "customFOV": 82.1,
+        "showFootprints": false,
+        "footprintColor": "#22c55e",
+        "sideOverlap": 80,
+        "frontOverlap": 80,
+        "pathType": "grid",
+        "angle": 45,
+        "autoDirection": false,
+        "generateEveryPoint": true,
+        "reversePath": false,
+        "waypointAction": "photo",
+        "photoInterval": 2,
+        "selectedDrone": "dji_mini_5_pro",
+        "straightenLegs": true,
+        "units": "metric",
+        "orbitRadius": 42,
+        "missionEndAction": "goHome"
+    },
+    "polygon": {
+        "id": "c0j2MlwBzRmmEXX4LBWrenAiKAyZbG2I",
+        "type": "Feature",
+        "properties": {
+            "isRectangle": true
+        },
+        "geometry": {
+            "coordinates": [
+                [
+                    [
+                        -106.61885114520412,
+                        34.98766954621284
+                    ],
+                    [
+                        -106.61807556009488,
+                        34.98766954621284
+                    ],
+                    [
+                        -106.61807556009488,
+                        34.987266597316406
+                    ],
+                    [
+                        -106.61885114520412,
+                        34.987266597316406
+                    ],
+                    [
+                        -106.61885114520412,
+                        34.98766954621284
+                    ]
+                ]
+            ],
+            "type": "Polygon"
+        }
+    }
+}

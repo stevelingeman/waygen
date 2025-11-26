@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import MapContainer from './components/Map/MapContainer';
+import React, { useState, Suspense } from 'react';
 import SidebarMain from './components/Sidebar/SidebarMain';
 
 import SearchBar from './components/Common/SearchBar';
+
+// Lazy load MapContainer to split the bundle
+const MapContainer = React.lazy(() => import('./components/Map/MapContainer'));
 
 function App() {
   const [currentPolygon, setCurrentPolygon] = useState(null);
@@ -27,8 +29,13 @@ function App() {
     <div className="flex h-screen w-screen overflow-hidden">
       <div className="relative flex-grow">
         <SearchBar />
-
-        <MapContainer onPolygonDrawn={setCurrentPolygon} />
+        <Suspense fallback={
+          <div className="flex h-full w-full items-center justify-center bg-gray-100">
+            <div className="text-lg font-semibold text-gray-500">Loading Map...</div>
+          </div>
+        }>
+          <MapContainer onPolygonDrawn={setCurrentPolygon} polygon={currentPolygon} />
+        </Suspense>
       </div>
       <SidebarMain currentPolygon={currentPolygon} setCurrentPolygon={setCurrentPolygon} />
     </div>
