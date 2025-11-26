@@ -8,7 +8,7 @@ const DragRectangleMode = {
             },
             geometry: {
                 type: 'Polygon',
-                coordinates: [[]]
+                coordinates: [[[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]]
             }
         });
 

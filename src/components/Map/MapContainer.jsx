@@ -9,6 +9,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import { useMissionStore } from '../../store/useMissionStore';
 import DragRectangleMode from '../../logic/DragRectangleMode';
+import DirectSelectRectangleMode from '../../logic/DirectSelectRectangleMode';
 import { calculateFootprint } from '../../utils/geospatial';
 import DrawToolbar from './DrawToolbar';
 
@@ -99,8 +100,6 @@ export default function MapContainer({ onPolygonDrawn }) {
       onPolygonDrawn(null);
     }
   }, [resetTrigger, onPolygonDrawn]);
-
-
 
   const [selectionBox, setSelectionBox] = useState(null);
   const [canDelete, setCanDelete] = useState(false);
@@ -200,7 +199,7 @@ export default function MapContainer({ onPolygonDrawn }) {
         ...MapboxDraw.modes,
         drag_circle: DragCircleMode,
         draw_rectangle: DragRectangleMode,
-        direct_select: DirectMode,
+        direct_select: DirectSelectRectangleMode,
         simple_select: SimpleSelectMode
       }
     });
@@ -219,9 +218,12 @@ export default function MapContainer({ onPolygonDrawn }) {
         useMissionStore.getState().updateSettings({ pathType: 'orbit', spacing: 10 });
       }
 
-      // 2. Handle Rectangle Creation (Optional: Tag it)
-      if (draw.current.getMode() === 'draw_rectangle') {
-        // It's already a polygon, so path generator handles it fine.
+      // 2. Handle Rectangle Creation
+      // Check if it comes from DragRectangleMode (which sets isRectangle: true)
+      // or if we are currently in the mode (handling race conditions)
+      if (feature.properties.isRectangle || draw.current.getMode() === 'draw_rectangle') {
+        draw.current.setFeatureProperty(feature.id, 'isRectangle', true);
+        feature.properties.isRectangle = true;
       }
 
       // 3. Check for "Accidental Large Circle" (Click vs Drag)
@@ -254,9 +256,7 @@ export default function MapContainer({ onPolygonDrawn }) {
 
       // 3. Auto-Deselect Tool (Switch to Simple Select)
       // This prevents drawing another circle immediately and shows resize handles
-      setTimeout(() => {
-        draw.current.changeMode('simple_select', { featureIds: [feature.id] });
-      }, 100);
+      setCurrentMode('simple_select');
     });
 
     map.current.on('draw.update', (e) => {
@@ -634,21 +634,118 @@ export default function MapContainer({ onPolygonDrawn }) {
     }
 
     const updateMode = (e) => {
-      setCurrentMode(e.mode);
-      if (e.mode === 'drag_circle' || e.mode === 'draw_rectangle') {
-        map.current.dragPan.disable();
-      } else {
-        map.current.dragPan.enable();
+      // If we are in 'add_waypoint' mode and Mapbox Draw switches to 'simple_select',
+      // we ignore it because 'add_waypoint' relies on 'simple_select' under the hood.
+      if (currentModeRef.current === 'add_waypoint' && e.mode === 'simple_select') {
+        return;
       }
+      setCurrentMode(e.mode);
     };
 
     map.current.on('draw.modechange', updateMode);
 
+    // Global Escape Key Listener
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        // If we are in a drawing mode or add_waypoint, switch to simple_select
+        if (currentModeRef.current !== 'simple_select') {
+          // If in Mapbox Draw mode, we might need to cancel the current feature first.
+          // Mapbox Draw handles Escape internally to cancel, but we want to ensure we exit the mode too.
+          if (draw.current) {
+            draw.current.changeMode('simple_select');
+          }
+          setCurrentMode('simple_select');
+        } else {
+          // If already in simple_select, maybe deselect?
+          setSelectedIds([]);
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+
+    // Cleanup
     return () => {
       window.removeEventListener('waygen:restore-polygon', handleRestorePolygon);
+      window.removeEventListener('keydown', onKeyDown);
     };
 
   }, []);
+
+  // Centralized Mode Management
+  useEffect(() => {
+    if (!draw.current || !map.current) return;
+
+    const mode = currentMode;
+    const drawMode = draw.current.getMode();
+
+    if (mode === 'add_waypoint') {
+      // When in add_waypoint, we use simple_select for Draw so we can still interact/select if needed,
+      // but we might want to suppress selection if it interferes.
+      // For now, simple_select is fine.
+      if (drawMode !== 'simple_select') {
+        draw.current.changeMode('simple_select');
+      }
+      // Force crosshair
+      map.current.getCanvas().style.cursor = 'crosshair';
+    } else {
+      // For standard Draw modes
+      if (drawMode !== mode) {
+        try {
+          draw.current.changeMode(mode);
+        } catch (err) {
+          console.warn('Failed to switch mode:', err);
+        }
+      }
+      map.current.getCanvas().style.cursor = '';
+    }
+  }, [currentMode]);
+
+  // Force Layout Updates (Fix for HMR/Persisted Styles)
+  useEffect(() => {
+    if (!map.current || !map.current.getLayer('waypoints-symbol')) return;
+
+    map.current.setLayoutProperty('waypoints-symbol', 'text-offset', [0, 0]);
+    map.current.setLayoutProperty('waypoints-symbol', 'text-anchor', 'center');
+    map.current.setLayoutProperty('waypoints-symbol', 'icon-anchor', 'center');
+    map.current.setLayoutProperty('waypoints-symbol', 'text-rotation-alignment', 'viewport');
+  }, []);
+
+  // Update Waypoints Source & Path
+  useEffect(() => {
+    if (!map.current) return;
+    if (!map.current.loaded()) return; // Added check for safety
+
+    const wpSource = map.current.getSource('waypoints');
+    const pathSource = map.current.getSource('mission-path');
+
+    if (wpSource) {
+      const features = waypoints.map((wp, index) => ({
+        type: 'Feature',
+        properties: {
+          id: wp.id,
+          index: index + 1,
+          selected: selectedIds.includes(wp.id),
+          heading: wp.heading || 0
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [wp.lng, wp.lat]
+        }
+      }));
+      wpSource.setData({ type: 'FeatureCollection', features });
+    }
+
+    if (pathSource) {
+      const lineCoords = waypoints.map(wp => [wp.lng, wp.lat]);
+      pathSource.setData({
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: lineCoords
+        }
+      });
+    }
+  }, [waypoints, selectedIds]);
 
   // Update Footprints
   useEffect(() => {
@@ -660,30 +757,17 @@ export default function MapContainer({ onPolygonDrawn }) {
     }
 
     const features = waypoints.map((wp, index) => {
-      // Use waypoint's heading if available, otherwise 0.
-      // Note: In a real mission, heading might be interpolated or set per waypoint.
-      // For now, we use wp.heading which is set by the store (bearing to next point).
-      // If it's the last point, it might keep the previous heading or 0.
       const heading = wp.heading || 0;
-
-      // Use custom FOV if 'custom' is selected, otherwise map from model
-      // Actually, store already handles mapping 'customFOV' to the correct value?
-      // No, store has 'selectedDrone' and 'customFOV'.
-      // We need to determine the FOV to use.
-      // Wait, in SidebarMain we updated 'customFOV' even for presets?
-      // "updateSettings({ selectedDrone: val, customFOV: fov });"
-      // Yes, we did! So settings.customFOV always holds the correct FOV to use.
-
       return {
         ...calculateFootprint(
           { lng: wp.lng, lat: wp.lat },
-          settings.altitude, // Assuming constant altitude for now, or wp.altitude if per-point
+          settings.altitude,
           heading,
           settings.customFOV
         ),
         properties: {
           index: index + 1,
-          color: settings.footprintColor // Add color property for dynamic styling
+          color: settings.footprintColor
         }
       };
     }).filter(f => f !== null);
@@ -708,7 +792,7 @@ export default function MapContainer({ onPolygonDrawn }) {
   };
 
   return (
-    <div className={`relative w-full h-full ${currentMode === 'drag_circle' || currentMode === 'draw_rectangle' || currentMode === 'add_waypoint' ? 'force-crosshair' : ''}`}>
+    <div className={`relative w-full h-full ${currentMode === 'add_waypoint' ? 'force-crosshair' : ''}`}>
       <style>{`
         .force-crosshair .mapboxgl-canvas-container {
           cursor: crosshair !important;
@@ -734,30 +818,10 @@ export default function MapContainer({ onPolygonDrawn }) {
         />
       )}
 
-      {/* Custom Draw Controls - Moved down to avoid overlap */}
+      {/* Custom Draw Controls */}
       <DrawToolbar
         currentMode={currentMode}
-        onModeChange={(mode) => {
-          // 1. Change Mode in MapboxDraw (Only if it's a valid Draw mode)
-          if (mode !== 'add_waypoint') {
-            draw.current?.changeMode(mode);
-          } else {
-            // If adding waypoint, switch Draw to simple_select to avoid interference
-            draw.current?.changeMode('simple_select');
-          }
-
-          // 2. Manually Update React State (Guaranteed UI Feedback)
-          setCurrentMode(mode);
-
-          // 3. Manually Handle DragPan (Guaranteed Interaction Fix)
-          if (map.current) {
-            if (mode === 'drag_circle' || mode === 'draw_rectangle') {
-              map.current.dragPan.disable();
-            } else {
-              map.current.dragPan.enable();
-            }
-          }
-        }}
+        onModeChange={setCurrentMode}
         onDelete={handleDelete}
         canDelete={canDelete}
       />
