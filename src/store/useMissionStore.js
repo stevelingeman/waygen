@@ -144,6 +144,26 @@ export const useMissionStore = create((set, get) => ({
     });
   },
 
+  moveWaypoints: (ids, deltaLng, deltaLat) => {
+    const { waypoints, past } = get();
+    const newWaypoints = waypoints.map(wp => {
+      if (ids.includes(wp.id)) {
+        return {
+          ...wp,
+          lng: wp.lng + deltaLng,
+          lat: wp.lat + deltaLat
+        };
+      }
+      return wp;
+    });
+
+    set({
+      waypoints: newWaypoints,
+      past: [...past, waypoints],
+      future: []
+    });
+  },
+
   // Undo/Redo
   undo: () => {
     const { past, future, waypoints } = get();

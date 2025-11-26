@@ -1,5 +1,5 @@
 import * as turf from '@turf/turf';
-import { generateUUID } from '../utils/uuid';
+import { generateUUID } from '../utils/uuid.js';
 
 // ... (existing imports)
 
@@ -187,7 +187,8 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
       }
     }
 
-    coords.forEach(c => {
+    coords.forEach((c, i) => {
+      const isRowEnd = i === coords.length - 1;
       waypoints.push({
         id: generateUUID(),
         lng: c[0],
@@ -197,7 +198,8 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
         gimbalPitch: Number(gimbalPitch),
         heading: 0,
         straightenLegs: straightenLegs,
-        action: waypointAction
+        action: waypointAction,
+        _isRowEnd: isRowEnd // Temporary flag
       });
     });
   });
@@ -220,14 +222,20 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
 
   // Calculate Headings (Point to next waypoint)
   for (let i = 0; i < waypoints.length; i++) {
-    if (i < waypoints.length - 1) {
+    if (waypoints[i]._isRowEnd && i > 0) {
+      // If it's the end of a row, retain the heading of the previous point (the row's heading)
+      // This prevents the camera from turning towards the next row's start point
+      waypoints[i].heading = waypoints[i - 1].heading;
+    } else if (i < waypoints.length - 1) {
       const start = turf.point([waypoints[i].lng, waypoints[i].lat]);
       const end = turf.point([waypoints[i + 1].lng, waypoints[i + 1].lat]);
       waypoints[i].heading = Math.round(turf.bearing(start, end));
     } else {
-      // Last point inherits the heading of the segment leading up to it
+      // Last point of the entire path inherits the heading of the segment leading up to it
       if (i > 0) waypoints[i].heading = waypoints[i - 1].heading;
     }
+    // Remove temporary flag
+    delete waypoints[i]._isRowEnd;
   }
 
   return waypoints;

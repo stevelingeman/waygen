@@ -84,7 +84,7 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
   const { waypoints, selectedIds, selectWaypoint, setSelectedIds, resetTrigger, settings, updateWaypoint, addWaypoint, setMapRef } = useMissionStore();
 
   // Drag State
-  const draggedPoint = useRef(null); // { id, initialLngLat }
+  const draggedPoint = useRef(null); // { id, isMulti, initialWaypoints, startLngLat }
 
   const [currentMode, setCurrentMode] = useState('simple_select');
   const currentModeRef = useRef(currentMode);
@@ -380,9 +380,29 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
       map.current.dragPan.disable();
       map.current.getCanvas().style.cursor = 'grabbing';
 
+      const clickedId = feature.properties.id;
+      const currentWaypoints = useMissionStore.getState().waypoints;
+      const currentSelectedIds = useMissionStore.getState().selectedIds;
+
+      // Determine if we are doing a multi-drag
+      // We do multi-drag if the clicked point is ALREADY selected.
+      // If it's not selected, we treat it as a single drag (even if others are selected, we assume the user wants to move just this one, or we could auto-select it, but let's stick to "move selection" logic).
+      // Actually, standard behavior is: if I click an unselected item, it becomes the only selection. But here we are just dragging.
+      // Let's say: If clicked ID is in selectedIds, move all selected. Else, move just this one.
+
+      const isMulti = currentSelectedIds.includes(clickedId);
+      const idsToMove = isMulti ? currentSelectedIds : [clickedId];
+
+      // Store initial state for all moving points
+      const initialWaypoints = currentWaypoints
+        .filter(wp => idsToMove.includes(wp.id))
+        .map(wp => ({ id: wp.id, lng: wp.lng, lat: wp.lat }));
+
       draggedPoint.current = {
-        id: feature.properties.id,
-        initialLngLat: feature.geometry.coordinates
+        ids: idsToMove,
+        isMulti,
+        initialWaypoints,
+        startLngLat: e.lngLat // { lng, lat }
       };
 
       map.current.on('mousemove', onPointDragMove);
@@ -393,18 +413,28 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
       if (!draggedPoint.current) return;
 
       const { lng, lat } = e.lngLat;
+      const { startLngLat, initialWaypoints } = draggedPoint.current;
+
+      const deltaLng = lng - startLngLat.lng;
+      const deltaLat = lat - startLngLat.lat;
 
       // Update the specific feature in the source directly for performance
       const wpSource = map.current.getSource('waypoints');
       const pathSource = map.current.getSource('mission-path');
 
-      // We need to construct a new FeatureCollection based on current store state + the moving point
-      // Accessing store state directly here to avoid stale closures if we used 'waypoints' prop
+      // We need to construct a new FeatureCollection based on current store state + the moving points
       const currentWaypoints = useMissionStore.getState().waypoints;
       const currentSelectedIds = useMissionStore.getState().selectedIds;
 
       const newFeatures = currentWaypoints.map((wp, index) => {
-        const isDragging = wp.id === draggedPoint.current.id;
+        // Check if this waypoint is one of the ones being dragged
+        const movingWp = initialWaypoints.find(iw => iw.id === wp.id);
+
+        let coords = [wp.lng, wp.lat];
+        if (movingWp) {
+          coords = [movingWp.lng + deltaLng, movingWp.lat + deltaLat];
+        }
+
         return {
           type: 'Feature',
           properties: {
@@ -415,7 +445,7 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
           },
           geometry: {
             type: 'Point',
-            coordinates: isDragging ? [lng, lat] : [wp.lng, wp.lat]
+            coordinates: coords
           }
         };
       });
@@ -438,10 +468,14 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
       if (!draggedPoint.current) return;
 
       const { lng, lat } = e.lngLat;
-      const { id } = draggedPoint.current;
+      const { startLngLat, ids } = draggedPoint.current;
+
+      const deltaLng = lng - startLngLat.lng;
+      const deltaLat = lat - startLngLat.lat;
 
       // Commit to store
-      useMissionStore.getState().updateWaypoint(id, { lng, lat });
+      // We use a batch update action
+      useMissionStore.getState().moveWaypoints(ids, deltaLng, deltaLat);
 
       // Cleanup
       draggedPoint.current = null;
