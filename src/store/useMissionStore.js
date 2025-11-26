@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { bearing } from '@turf/turf';
-import mapboxgl from 'mapbox-gl';
+
 import { getDronePreset } from '../utils/dronePresets';
 import { calculateMaxSpeed, calculateMissionTime, getFlightWarningLevel, calculateDistance } from '../utils/geospatial';
 import { generateUUID } from '../utils/uuid';
@@ -197,10 +197,19 @@ export const useMissionStore = create((set, get) => ({
     if (!mapRef || !waypoints || waypoints.length === 0) return;
 
     // Calculate bounds for all waypoints
-    const bounds = new mapboxgl.LngLatBounds();
+    let minLng = waypoints[0].lng;
+    let maxLng = waypoints[0].lng;
+    let minLat = waypoints[0].lat;
+    let maxLat = waypoints[0].lat;
+
     waypoints.forEach(wp => {
-      bounds.extend([wp.lng, wp.lat]);
+      if (wp.lng < minLng) minLng = wp.lng;
+      if (wp.lng > maxLng) maxLng = wp.lng;
+      if (wp.lat < minLat) minLat = wp.lat;
+      if (wp.lat > maxLat) maxLat = wp.lat;
     });
+
+    const bounds = [[minLng, minLat], [maxLng, maxLat]];
 
     // Fit map to bounds with padding
     mapRef.fitBounds(bounds, {

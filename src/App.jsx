@@ -1,7 +1,7 @@
 import React, { useState, Suspense } from 'react';
 import SidebarMain from './components/Sidebar/SidebarMain';
 
-import SearchBar from './components/Common/SearchBar';
+const SearchBar = React.lazy(() => import('./components/Common/SearchBar'));
 
 // Lazy load MapContainer to split the bundle
 const MapContainer = React.lazy(() => import('./components/Map/MapContainer'));
@@ -28,7 +28,9 @@ function App() {
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       <div className="relative flex-grow">
-        <SearchBar />
+        <Suspense fallback={null}>
+          <SearchBar />
+        </Suspense>
         <Suspense fallback={
           <div className="flex h-full w-full items-center justify-center bg-gray-100">
             <div className="text-lg font-semibold text-gray-500">Loading Map...</div>
