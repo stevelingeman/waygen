@@ -53,3 +53,5 @@ This feature allows Waygen to preserve the user's session state (sidebar setting
 
 ## Known Issues (Triage)
 - **Waypoint Visibility:** There was a reported issue where imported waypoints were not visible due to layer initialization timing. This has been addressed by refactoring the layer addition logic in `MapContainer.jsx` to be more robust.
+- **Polygon Disappearance:** Fixed an issue where the imported polygon would disappear when deselected. This was caused by the `draw.selectionchange` event handler incorrectly clearing the state.
+- **Non-Secure Context Crash:** Fixed a crash (`crypto.randomUUID is not a function`) when running the app over HTTP. Implemented a robust `generateUUID` utility to handle this.

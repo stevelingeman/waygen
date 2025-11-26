@@ -309,4 +309,20 @@ Convert display value back to meters.
 
 ---
 
-**Last Updated**: 2025-11-25
+### uuid.js
+
+**Location**: `src/utils/uuid.js`
+
+#### `generateUUID(): string`
+Generate a UUID v4 string with fallback for non-secure contexts.
+
+**Returns:**
+- UUID string
+
+**Implementation:**
+- Uses native `crypto.randomUUID()` if available (HTTPS/localhost)
+- Falls back to math-based generator for HTTP contexts
+
+---
+
+**Last Updated**: 2025-11-26
