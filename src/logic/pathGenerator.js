@@ -1,4 +1,5 @@
 import * as turf from '@turf/turf';
+import { generateUUID } from '../utils/uuid';
 
 // ... (existing imports)
 
@@ -35,7 +36,7 @@ function generateOrbitPath(polygonFeature, settings) {
     const heading = Math.round(turf.bearing(pt, center));
 
     waypoints.push({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       lng: pt.geometry.coordinates[0],
       lat: pt.geometry.coordinates[1],
       altitude: Number(altitude),
@@ -52,7 +53,7 @@ function generateOrbitPath(polygonFeature, settings) {
   // Let's add the first point to the end to complete the circle.
   if (waypoints.length > 0) {
     const first = waypoints[0];
-    waypoints.push({ ...first, id: crypto.randomUUID() });
+    waypoints.push({ ...first, id: generateUUID() });
   }
 
   return waypoints;
@@ -188,7 +189,7 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
 
     coords.forEach(c => {
       waypoints.push({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         lng: c[0],
         lat: c[1],
         altitude: Number(altitude),

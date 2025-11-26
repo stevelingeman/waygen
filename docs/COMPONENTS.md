@@ -15,7 +15,8 @@ This guide provides detailed documentation for each component in the Waygen appl
 **Props:**
 ```typescript
 {
-  onPolygonDrawn: (polygon: GeoJSON.Feature | null) => void
+  onPolygonDrawn: (polygon: GeoJSON.Feature | null) => void;
+  polygon: GeoJSON.Feature | null;
 }
 ```
 
@@ -96,6 +97,7 @@ const resetTrigger = useMissionStore(state => state.resetTrigger);
 ```typescript
 {
   currentPolygon: GeoJSON.Feature | null;
+  setCurrentPolygon: (polygon: GeoJSON.Feature | null) => void;
 }
 ```
 

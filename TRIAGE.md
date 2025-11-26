@@ -1,21 +1,22 @@
-# Triage: Polygon Disappears on Map Click
+# Triage: Generate Path Fails after Import
 
 ## Issue Description
-After importing a session or drawing a polygon, if the user selects a waypoint (entering edit mode) and then clicks on the map to deselect/leave edit mode, the polygon disappears from the map. The waypoints remain visible.
+After importing a KMZ, the session data (including polygon) loads correctly. However, selecting the polygon and clicking "Generate Path" does nothing.
 
 ## Steps to Reproduce
-1.  Import a session (KMZ) or draw a polygon.
-2.  Select a waypoint (click on a teardrop icon).
-3.  Click anywhere on the map background (not on a waypoint or the polygon).
-4.  **Result**: The polygon disappears.
-5.  **Expected**: The polygon should remain visible; only the waypoint selection should be cleared.
+1.  Import a KMZ file with a polygon.
+2.  Select the polygon on the map (or ensure it's loaded).
+3.  Click "Generate Path".
+4.  **Result**: No path is generated.
+5.  **Expected**: The path generation logic should execute using the selected polygon.
 
 ## Initial Analysis
--   **Component**: `MapContainer.jsx`
--   **Suspect**: The `click` event listener on the map.
--   **Theory**: The click handler likely calls `onPolygonDrawn(null)` or triggers a state change that clears the `currentPolygon` in `App.jsx`, which then propagates back down to `MapContainer` via the `polygon` prop, causing the `useEffect` to clear the draw instance.
+-   **Component**: `SidebarMain.jsx`
+-   **Function**: `handleGenerate`
+-   **Suspect**: The `currentPolygon` state might be stale or not correctly updated when the polygon is "selected" via map interaction vs. "loaded" via import.
+-   **Context**: We recently changed how `currentPolygon` is synced (props vs events).
 
 ## Investigation Plan
-1.  Examine the `map.current.on('click', ...)` handler in `MapContainer.jsx`.
-2.  Check for any `draw.selectionchange` or `draw.delete` events that might be firing unexpectedly.
-3.  Verify how `onPolygonDrawn` is called during map clicks.
+1.  Check `handleGenerate` in `SidebarMain.jsx`.
+2.  Check how `currentPolygon` is passed and updated in `App.jsx`.
+3.  Verify if `onPolygonDrawn` in `MapContainer` is called correctly when selecting an existing polygon.

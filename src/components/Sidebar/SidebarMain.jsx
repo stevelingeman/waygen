@@ -11,6 +11,7 @@ import { getDronePreset } from '../../utils/dronePresets';
 import { toDisplay, toMetric } from '../../utils/units';
 import { calculateMaxSpeed } from '../../utils/geospatial';
 import EditSelectedPanel from './EditSelectedPanel';
+import { generateUUID } from '../../utils/uuid';
 
 const Section = ({ title, icon: Icon, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -92,7 +93,7 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
       geojson.features.forEach(f => {
         if (f.geometry.type === "Point") {
           newPoints.push({
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             lng: f.geometry.coordinates[0],
             lat: f.geometry.coordinates[1],
             altitude: f.properties.altitude !== undefined ? f.properties.altitude : settings.altitude,

@@ -42,8 +42,8 @@ Waygen follows a **React-based component architecture** with unidirectional data
 │  │ kmlImporter.js  │  │DragRectangle │  │dronePresets  │   │
 │  └─────────────────┘  └──────────────┘  └──────────────┘   │
 │  ┌─────────────────┐                                        │
-│  │ units.js        │                                        │
-│  └─────────────────┘                                        │
+│  │ units.js        │  │ uuid.js       │                             │
+│  └─────────────────┘  └───────────────┘                             │
 └─────────────────────────────────────────────────────────────┘
                             ↕
 ┌─────────────────────────────────────────────────────────────┐
@@ -62,7 +62,7 @@ Waygen follows a **React-based component architecture** with unidirectional data
 **Responsibility**: Top-level layout and component orchestration.
 
 #### **MapContainer.jsx** - Map Engine
-**Responsibility**: Mapbox integration, rendering, and user interactions.
+**Responsibility**: Mapbox integration, rendering, and user interactions. Receives `polygon` prop for synchronization.
 
 **Key Features:**
 - **Layers**:
@@ -193,6 +193,11 @@ Waygen follows a **React-based component architecture** with unidirectional data
 ### units.js
 **Exports**: `toDisplay`, `toMetric`.
 - Handles unit conversion between metric (internal) and imperial (display).
+197: 
+198: ### uuid.js
+199: **Exports**: `generateUUID`.
+200: - Generates UUID v4 strings.
+201: - Polyfills `crypto.randomUUID` for non-secure contexts (HTTP).
 
 ---
 

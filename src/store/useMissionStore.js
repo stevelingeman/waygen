@@ -3,6 +3,7 @@ import { bearing } from '@turf/turf';
 import mapboxgl from 'mapbox-gl';
 import { getDronePreset } from '../utils/dronePresets';
 import { calculateMaxSpeed, calculateMissionTime, getFlightWarningLevel, calculateDistance } from '../utils/geospatial';
+import { generateUUID } from '../utils/uuid';
 
 export const useMissionStore = create((set, get) => ({
   waypoints: [],
@@ -65,7 +66,7 @@ export const useMissionStore = create((set, get) => ({
     }
 
     const newWp = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       ...waypoint,
       altitude: state.settings.altitude,
       speed: speed,

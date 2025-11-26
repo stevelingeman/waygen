@@ -31,21 +31,21 @@ This feature allows Waygen to preserve the user's session state (sidebar setting
 - **Export:** In `handleDownloadConfirm`, the current `settings` and `currentPolygon` are captured and passed to `downloadKMZ`.
 - **Import:** In `handleFileUpload`, the `sessionData` is processed:
   - `updateSettings(sessionData.settings)` restores sidebar inputs.
-  - `setCurrentPolygon(sessionData.polygon)` updates the React state.
-  - A custom event `waygen:restore-polygon` is dispatched with the polygon data to notify the map component.
+  - `setCurrentPolygon(sessionData.polygon)` updates the React state in `App.jsx`.
 
 ### 4. Map Restoration (`MapContainer.jsx`)
 - **File:** `src/components/Map/MapContainer.jsx`
-- **Event Listener:** Added a listener for `waygen:restore-polygon`.
-- **Action:** When the event is received:
-  1.  The `MapboxDraw` instance is cleared (`deleteAll`).
-  2.  The restored polygon is added to the draw instance (`add`).
-  3.  The map view fits to the polygon bounds (`fitBounds`).
-- **Initialization:** Refactored `map.on('load')` logic to ensure layers are initialized correctly, handling potential race conditions where the map might load before listeners are attached.
+- **Mechanism:** Prop-based Synchronization.
+- **Action:**
+  1.  `App.jsx` passes `currentPolygon` as a prop to `MapContainer`.
+  2.  `MapContainer` uses a `useEffect` to monitor the `polygon` prop.
+  3.  When the prop changes (e.g., after import), it clears the current draw instance and adds the new polygon.
+  4.  The map view fits to the polygon bounds (`fitBounds`).
+- **Robustness:** This approach avoids race conditions associated with event listeners and ensures the map always reflects the application state.
 
 ### 5. Application Wiring (`App.jsx`)
 - **File:** `src/App.jsx`
-- **Change:** Passed the `setCurrentPolygon` state setter down to `SidebarMain` to allow it to update the polygon state during import.
+- **Change:** Manages `currentPolygon` state and passes it to both `SidebarMain` (for setting) and `MapContainer` (for rendering).
 
 ## Performance Optimization
 - **File:** `vite.config.js`
