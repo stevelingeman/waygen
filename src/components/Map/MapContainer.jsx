@@ -11,7 +11,6 @@ import { useMissionStore } from '../../store/useMissionStore';
 import DragRectangleMode from '../../logic/DragRectangleMode';
 import DirectSelectRectangleMode from '../../logic/DirectSelectRectangleMode';
 import { calculateFootprint } from '../../utils/geospatial';
-import { getComplementaryColor } from '../../utils/colors';
 import DrawToolbar from './DrawToolbar';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -780,14 +779,14 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
         ),
         properties: {
           index: index + 1,
-          color: selectedIds.includes(wp.id) ? getComplementaryColor(settings.footprintColor) : settings.footprintColor
+          color: settings.footprintColor
         }
       };
     }).filter(f => f !== null);
 
     map.current.getSource('footprints').setData({ type: 'FeatureCollection', features });
 
-  }, [waypoints, selectedIds, settings.showFootprints, settings.altitude, settings.customFOV, settings.footprintColor]);
+  }, [waypoints, settings.showFootprints, settings.altitude, settings.customFOV, settings.footprintColor]);
 
   // Ensure default radius is reasonable on load
   useEffect(() => {
