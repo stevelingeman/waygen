@@ -456,6 +456,26 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
               className="accent-blue-600 w-4 h-4"
             />
           </div>
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-700">Show Image Footprints</label>
+              {settings.showFootprints && (
+                <input
+                  type="color"
+                  value={settings.footprintColor}
+                  onChange={e => updateSettings({ footprintColor: e.target.value })}
+                  className="w-4 h-4 rounded border border-gray-300 cursor-pointer"
+                  title="Choose footprint color"
+                />
+              )}
+            </div>
+            <input
+              type="checkbox"
+              checked={settings.showFootprints}
+              onChange={e => updateSettings({ showFootprints: e.target.checked })}
+              className="accent-blue-600 w-4 h-4"
+            />
+          </div>
         </Section>
 
         <Section title="Camera" icon={Camera} defaultOpen={true}>
@@ -475,26 +495,7 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
               <option value="record">Start/Stop Recording</option>
             </select>
           </div>
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-700">Show Footprints</label>
-              {settings.showFootprints && (
-                <input
-                  type="color"
-                  value={settings.footprintColor}
-                  onChange={e => updateSettings({ footprintColor: e.target.value })}
-                  className="w-4 h-4 rounded border border-gray-300 cursor-pointer"
-                  title="Choose footprint color"
-                />
-              )}
-            </div>
-            <input
-              type="checkbox"
-              checked={settings.showFootprints}
-              onChange={e => updateSettings({ showFootprints: e.target.checked })}
-              className="accent-blue-600 w-4 h-4"
-            />
-          </div>
+
         </Section>
 
 

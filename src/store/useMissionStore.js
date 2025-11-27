@@ -31,7 +31,7 @@ export const useMissionStore = create((set, get) => ({
     customFOV: 82.1,
     showFootprints: false,
     footprintColor: '#22c55e',
-    sideOverlap: 70,
+    sideOverlap: 80,
     frontOverlap: 80,
     pathType: 'grid',
     angle: 0,
