@@ -4,7 +4,7 @@ import { generateUUID } from '../utils/uuid.js';
 // ... (existing imports)
 
 function generateOrbitPath(polygonFeature, settings) {
-  const { altitude, speed, gimbalPitch, spacing, straightenLegs, waypointAction } = settings;
+  const { altitude, speed, gimbalPitch, spacing, straightenLegs, waypointAction, startAngle, direction, numberOfOrbits } = settings;
 
   // 1. Calculate Center and Radius
   const center = turf.centroid(polygonFeature);
@@ -18,21 +18,47 @@ function generateOrbitPath(polygonFeature, settings) {
   });
   const radius = totalDist / vertices.length;
 
-  // 2. Calculate Circumference and Number of Points
+  // Ensure minimum number of orbits
+  const actualNumberOfOrbits = Math.max(0.1, numberOfOrbits);
+
+  // 2. Calculate Circumference and Number of Points for ONE orbit
   const circumference = 2 * Math.PI * radius;
-  const numPoints = Math.max(3, Math.round(circumference / spacing));
+  const pointsPerOrbit = Math.max(3, Math.round(circumference / spacing));
+
+  // Calculate total number of points for the specified number of orbits
+  // Ensure we generate enough points to cover the entire sweep, including the end point
+  const totalPointsToGenerate = Math.round(pointsPerOrbit * actualNumberOfOrbits);
 
   const waypoints = [];
 
+  // Convert startAngle from spec (East=0, CCW) to Turf.js bearing (North=0, CW)
+  // Turf.js bearing starts at North (0), goes clockwise.
+  // Our spec: East (0), goes counter-clockwise.
+  // So, spec 0 (East) is turf 90. spec 90 (North) is turf 0.
+  // Conversion: turf_angle = (90 - spec_angle + 360) % 360
+  const turfStartAngle = (90 - startAngle + 360) % 360;
+
+  // Calculate total sweep angle
+  const totalSweepDegrees = 360 * actualNumberOfOrbits;
+
   // 3. Generate Points
-  for (let i = 0; i < numPoints; i++) {
-    const angle = (i / numPoints) * 360;
-    // Create point at distance 'radius' and bearing 'angle' from center
-    const pt = turf.destination(center, radius / 1000, angle, { units: 'kilometers' });
+  for (let i = 0; i <= totalPointsToGenerate; i++) { // Include the end point for full rotations
+    // Calculate the angle relative to the startAngle
+    let relativeAngle = (i / totalPointsToGenerate) * totalSweepDegrees;
+
+    let currentTurfAngle;
+    if (direction === 'clockwise') {
+      currentTurfAngle = (turfStartAngle - relativeAngle + 360 * 100) % 360; // Add large multiple of 360 to ensure positive modulo result
+    } else { // counter-clockwise
+      currentTurfAngle = (turfStartAngle + relativeAngle + 360) % 360;
+    }
+    
+    // Create point at distance 'radius' and bearing 'currentTurfAngle' from center
+    // radius / 1000 because turf.destination expects distance in kilometers
+    const pt = turf.destination(center, radius / 1000, currentTurfAngle, { units: 'kilometers' });
 
     // Calculate heading: Point -> Center
-    // Bearing from Point to Center is (angle + 180) % 360
-    // But we want the drone to face center.
+    // Bearing from Point to Center is (current point to center)
     const heading = Math.round(turf.bearing(pt, center));
 
     waypoints.push({
@@ -48,13 +74,9 @@ function generateOrbitPath(polygonFeature, settings) {
     });
   }
 
-  // Close the loop? Usually orbit implies full circle, so maybe add first point at end?
-  // User didn't explicitly ask, but standard orbits often loop. 
-  // Let's add the first point to the end to complete the circle.
-  if (waypoints.length > 0) {
-    const first = waypoints[0];
-    waypoints.push({ ...first, id: generateUUID() });
-  }
+  // The loop automatically handles closing for integer numberOfOrbits.
+  // If numberOfOrbits is fractional, the path will end at the calculated point.
+  // No explicit loop closing needed as the points are generated covering the entire sweep.
 
   return waypoints;
 }

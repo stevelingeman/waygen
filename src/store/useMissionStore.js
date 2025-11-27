@@ -44,6 +44,9 @@ export const useMissionStore = create((set, get) => ({
     straightenLegs: false,
     units: 'metric',
     orbitRadius: 50,
+    startAngle: 0, // 0-359 degrees, 0 is East, increasing counter-clockwise
+    direction: 'counter-clockwise', // 'clockwise' | 'counter-clockwise'
+    numberOfOrbits: 1.0, // Positive float, e.g., 0.5, 1.0, 2.3
     missionEndAction: 'goHome', // 'goHome' | 'autoLand'
   },
 

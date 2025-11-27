@@ -302,14 +302,30 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs font-bold text-gray-500 mb-1 block">Units</label>
-              <select
-                value={settings.units}
-                onChange={e => updateSettings({ units: e.target.value })}
-                className="w-full border rounded p-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="metric">Metric (m)</option>
-                <option value="imperial">Imperial (ft)</option>
-              </select>
+              <div className="flex flex-col gap-2 mt-1">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="units"
+                    value="metric"
+                    checked={settings.units === 'metric'}
+                    onChange={() => updateSettings({ units: 'metric' })}
+                    className="form-radio h-4 w-4 text-blue-600 focus:ring-blue-500 transition duration-150 ease-in-out"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Metric (m)</span>
+                </label>
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="units"
+                    value="imperial"
+                    checked={settings.units === 'imperial'}
+                    onChange={() => updateSettings({ units: 'imperial' })}
+                    className="form-radio h-4 w-4 text-blue-600 focus:ring-blue-500 transition duration-150 ease-in-out"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Imperial (ft)</span>
+                </label>
+              </div>
             </div>
             <div>
               <label className="text-xs font-bold text-gray-500 mb-1 block">Altitude ({settings.units === 'metric' ? 'm' : 'ft'})</label>
