@@ -178,7 +178,7 @@ export const downloadKMZ = async (waypoints, settings, filename = "MiniMission",
 
   // 3. Store Session Data (Settings + Polygon)
   if (sessionData) {
-    wpmz.file("waygen_session.json", JSON.stringify(sessionData, null, 2));
+    zip.file("waygen_session.json", JSON.stringify(sessionData, null, 2));
   }
 
   const content = await zip.generateAsync({ type: "blob" });

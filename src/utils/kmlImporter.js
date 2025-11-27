@@ -110,7 +110,7 @@ export const parseImport = async (file) => {
 
         // 4. Extract Session Data if available
         let sessionData = null;
-        const sessionFile = zip.file("wpmz/waygen_session.json");
+        const sessionFile = zip.file("waygen_session.json");
         if (sessionFile) {
           try {
             const sessionText = await sessionFile.async("text");

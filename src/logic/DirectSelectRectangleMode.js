@@ -103,6 +103,7 @@ const DirectSelectRectangleMode = {
                 ];
 
                 feature.incomingCoords([newCoords]);
+                state.draggingHandle = true; // Ensure we fire update on mouse up
                 return;
             }
         }

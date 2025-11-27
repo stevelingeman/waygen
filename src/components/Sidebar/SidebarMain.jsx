@@ -78,7 +78,13 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
       } else if (currentPolygon && currentPolygon.id) {
         // If nothing selected but we have a current polygon, try to get it from draw
         const feature = window.mapboxDraw.get(currentPolygon.id);
-        if (feature) polygonToUse = feature;
+        if (feature) {
+          polygonToUse = feature;
+          // Ensure we update the state too if it was stale
+          if (setCurrentPolygon) {
+            setCurrentPolygon(polygonToUse);
+          }
+        }
       }
     }
 
