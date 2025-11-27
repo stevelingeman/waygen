@@ -82,6 +82,16 @@ const DragRectangleMode = {
         const minY = Math.min(start[1], end[1]);
         const maxY = Math.max(start[1], end[1]);
 
+        // Enforce standard winding (Counter-Clockwise for exterior rings in GeoJSON is recommended, 
+        // but Mapbox Draw often uses CW. Let's stick to a consistent order: TL -> TR -> BR -> BL -> TL)
+        // Actually, standard GeoJSON is CCW. 
+        // Let's use:
+        // 1. Top-Left (minX, maxY)
+        // 2. Top-Right (maxX, maxY)
+        // 3. Bottom-Right (maxX, minY)
+        // 4. Bottom-Left (minX, minY)
+        // 5. Close (minX, maxY)
+
         const coordinates = [
             [minX, maxY], // Top Left
             [maxX, maxY], // Top Right

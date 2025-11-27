@@ -74,6 +74,12 @@ const simpleStyles = [
     "filter": ["all", ["==", "$type", "Polygon"], ["==", "mode", "static"]],
     "layout": { "line-cap": "round", "line-join": "round" },
     "paint": { "line-color": "#000", "line-width": 2 }
+  },
+  {
+    "id": "gl-draw-polygon-midpoint",
+    "type": "circle",
+    "filter": ["all", ["==", "$type", "Point"], ["==", "meta", "resize-handle"]],
+    "paint": { "circle-radius": 4, "circle-color": "#fbb03b" }
   }
 ];
 
