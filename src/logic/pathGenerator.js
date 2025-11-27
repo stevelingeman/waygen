@@ -199,7 +199,8 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
         heading: 0,
         straightenLegs: straightenLegs,
         action: waypointAction,
-        _isRowEnd: isRowEnd // Temporary flag
+        _isRowEnd: isRowEnd, // Temporary flag
+        _isRowStart: i === 0 // Temporary flag for reverse path
       });
     });
   });
@@ -222,7 +223,9 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
 
   // Calculate Headings (Point to next waypoint)
   for (let i = 0; i < waypoints.length; i++) {
-    if (waypoints[i]._isRowEnd && i > 0) {
+    const isEffectiveRowEnd = reversePath ? waypoints[i]._isRowStart : waypoints[i]._isRowEnd;
+
+    if (isEffectiveRowEnd && i > 0) {
       // If it's the end of a row, retain the heading of the previous point (the row's heading)
       // This prevents the camera from turning towards the next row's start point
       waypoints[i].heading = waypoints[i - 1].heading;
@@ -234,8 +237,9 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
       // Last point of the entire path inherits the heading of the segment leading up to it
       if (i > 0) waypoints[i].heading = waypoints[i - 1].heading;
     }
-    // Remove temporary flag
+    // Remove temporary flags
     delete waypoints[i]._isRowEnd;
+    delete waypoints[i]._isRowStart;
   }
 
   return waypoints;
