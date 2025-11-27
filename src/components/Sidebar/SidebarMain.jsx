@@ -58,10 +58,34 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
   };
 
   const handleGenerate = () => {
-    if (!currentPolygon) return alert("Draw a shape first!");
+    // Force exit edit mode to confirm changes and update UI
+    if (window.mapboxDraw) {
+      // Switch to simple_select to exit any edit mode
+      window.mapboxDraw.changeMode('simple_select');
+    }
+
+    // Get the latest polygon data directly from Draw to ensure we have the most up-to-date version
+    // This handles cases where React state might be slightly behind or if the edit wasn't fully committed
+    let polygonToUse = currentPolygon;
+    if (window.mapboxDraw) {
+      const selected = window.mapboxDraw.getSelected();
+      if (selected.features.length > 0) {
+        polygonToUse = selected.features[0];
+        // Ensure we update the state too if it was stale
+        if (setCurrentPolygon) {
+          setCurrentPolygon(polygonToUse);
+        }
+      } else if (currentPolygon && currentPolygon.id) {
+        // If nothing selected but we have a current polygon, try to get it from draw
+        const feature = window.mapboxDraw.get(currentPolygon.id);
+        if (feature) polygonToUse = feature;
+      }
+    }
+
+    if (!polygonToUse) return alert("Draw a shape first!");
 
     // Step 1: Generate initial path to get waypoint geometry
-    const initialPath = generatePhotogrammetryPath(currentPolygon, settings);
+    const initialPath = generatePhotogrammetryPath(polygonToUse, settings);
 
     // Step 2: Calculate max safe speed based on photo interval
     const dronePreset = getDronePreset(settings.selectedDrone);
@@ -73,7 +97,7 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
       ...settings,
       speed: maxSpeed > 0 ? maxSpeed : settings.speed
     };
-    const finalPath = generatePhotogrammetryPath(currentPolygon, settingsWithSpeed);
+    const finalPath = generatePhotogrammetryPath(polygonToUse, settingsWithSpeed);
 
     // Step 4: Set waypoints and update metrics
     setWaypoints(finalPath);
