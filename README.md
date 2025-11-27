@@ -2,7 +2,7 @@
 
 **Waygen** is a professional drone mission planning application for photogrammetry and aerial survey missions. It provides an intuitive map-based interface for designing flight paths, configuring camera settings, and exporting mission files compatible with DJI drones.
 
-![License](https://img.shields.io/badge/license-Private-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 ![Version](https://img.shields.io/badge/version-1.0.0-green)
 
 ## 🌐 Live Demo
@@ -173,9 +173,15 @@ Calculated based on Altitude and Horizontal Field of View (HFOV).
 
 ---
 
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
 ## 🤝 Contributing
 
-This is a private project. For questions or suggestions, please contact the project maintainer.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
