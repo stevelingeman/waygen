@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Map as MapIcon, Satellite, Crosshair } from 'lucide-react';
 import * as turf from '@turf/turf';
 import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
@@ -93,6 +94,7 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
   const draggedPoint = useRef(null); // { id, isMulti, initialWaypoints, startLngLat }
 
   const [currentMode, setCurrentMode] = useState('simple_select');
+  const [mapStyle, setMapStyle] = useState('satellite');
   const currentModeRef = useRef(currentMode);
 
   useEffect(() => {
@@ -649,6 +651,9 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
       map.current.on('load', initializeLayers);
     }
 
+    // Re-initialize layers when style changes
+    map.current.on('style.load', initializeLayers);
+
     const updateMode = (e) => {
       // If we are in 'add_waypoint' mode and Mapbox Draw switches to 'simple_select',
       // we ignore it because 'add_waypoint' relies on 'simple_select' under the hood.
@@ -874,6 +879,59 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
         onDelete={handleDelete}
         canDelete={canDelete}
       />
+
+      {/* Map Controls */}
+      <div className="absolute bottom-8 left-4 flex flex-col gap-2 z-10">
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden flex flex-col">
+          <button
+            onClick={() => {
+              if (mapStyle !== 'satellite') {
+                setMapStyle('satellite');
+                map.current.setStyle('mapbox://styles/mapbox/satellite-streets-v12');
+              }
+            }}
+            className={`p-2 hover:bg-gray-50 transition-colors ${mapStyle === 'satellite' ? 'bg-blue-50 text-blue-600' : 'text-gray-700'}`}
+            title="Satellite View"
+          >
+            <Satellite size={20} />
+          </button>
+          <div className="h-px bg-gray-200" />
+          <button
+            onClick={() => {
+              if (mapStyle !== 'streets') {
+                setMapStyle('streets');
+                map.current.setStyle('mapbox://styles/mapbox/streets-v12');
+              }
+            }}
+            className={`p-2 hover:bg-gray-50 transition-colors ${mapStyle === 'streets' ? 'bg-blue-50 text-blue-600' : 'text-gray-700'}`}
+            title="Street Map"
+          >
+            <MapIcon size={20} />
+          </button>
+        </div>
+
+        <button
+          onClick={() => {
+            if ('geolocation' in navigator) {
+              navigator.geolocation.getCurrentPosition(position => {
+                map.current.flyTo({
+                  center: [position.coords.longitude, position.coords.latitude],
+                  zoom: 16
+                });
+              }, error => {
+                console.error("Error getting location:", error);
+                alert("Could not get your location. Please check permissions.");
+              });
+            } else {
+              alert("Geolocation is not supported by your browser.");
+            }
+          }}
+          className="bg-white p-2 rounded-lg shadow-md border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"
+          title="My Location"
+        >
+          <Crosshair size={20} />
+        </button>
+      </div>
     </div>
   );
 }

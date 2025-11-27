@@ -7,7 +7,7 @@ export default function SearchBar({ map }) {
 
   useEffect(() => {
     if (!map || !container.current) return;
-    
+
     // Check if control already added to avoid duplicates
     if (document.querySelector('.mapboxgl-ctrl-geocoder')) return;
 
@@ -15,7 +15,7 @@ export default function SearchBar({ map }) {
       accessToken: mapboxgl.accessToken,
       mapboxgl: mapboxgl,
       marker: false,
-      collapsed: true,
+      collapsed: false,
     });
 
     container.current.appendChild(geocoder.onAdd(map));
