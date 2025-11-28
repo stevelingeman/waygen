@@ -173,6 +173,22 @@ export const useMissionStore = create((set, get) => ({
     });
   },
 
+  insertWaypoint: (index, waypoint) => set((state) => {
+    const newWp = {
+      id: generateUUID(),
+      ...waypoint
+    };
+    const newWaypoints = [...state.waypoints];
+    newWaypoints.splice(index, 0, newWp);
+
+    return {
+      waypoints: newWaypoints,
+      past: [...state.past, state.waypoints],
+      future: [],
+      selectedIds: [newWp.id]
+    };
+  }),
+
   // Undo/Redo
   undo: () => {
     const { past, future, waypoints } = get();

@@ -37,7 +37,7 @@ const Section = ({ title, icon: Icon, children, defaultOpen = false }) => {
 export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
   const {
     waypoints, selectedIds, settings,
-    setWaypoints, updateSelectedWaypoints, deleteSelectedWaypoints,
+    setWaypoints, updateSelectedWaypoints, deleteSelectedWaypoints, insertWaypoint,
     undo, redo, updateSettings, resetMission, fitMapToWaypoints,
     currentMissionFilename, setMissionFilename,
     calculatedMaxSpeed, minSegmentDistance
@@ -285,9 +285,11 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
       <EditSelectedPanel
         selectedWaypoints={selectedWaypoints}
         selectedIds={selectedIds}
+        waypoints={waypoints}
         settings={settings}
         onUpdate={updateSelectedWaypoints}
         onDelete={deleteSelectedWaypoints}
+        onInsert={insertWaypoint}
       />
     );
   }

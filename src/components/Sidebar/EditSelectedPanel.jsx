@@ -1,16 +1,55 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Trash2, Save } from 'lucide-react';
+import { Settings, Trash2, Save, Plus } from 'lucide-react';
+import * as turf from '@turf/turf';
 import { toDisplay, toMetric } from '../../utils/units';
 
 export default function EditSelectedPanel({
     selectedWaypoints,
     selectedIds,
+    waypoints,
     settings,
     onUpdate,
-    onDelete
+    onDelete,
+    onInsert
 }) {
     const [localState, setLocalState] = useState({});
     const [hasChanges, setHasChanges] = useState(false);
+
+    // Check if we can insert a waypoint (exactly 2 selected, adjacent)
+    const canInsert = selectedIds.length === 2 && waypoints && (() => {
+        const indices = selectedIds.map(id => waypoints.findIndex(wp => wp.id === id)).sort((a, b) => a - b);
+        return indices[0] !== -1 && indices[1] !== -1 && (indices[1] - indices[0] === 1);
+    })();
+
+    const handleInsert = () => {
+        if (!canInsert) return;
+
+        const indices = selectedIds.map(id => waypoints.findIndex(wp => wp.id === id)).sort((a, b) => a - b);
+        const firstIdx = indices[0];
+        // const secondIdx = indices[1]; // Not needed for logic, just verification
+        const firstWp = waypoints[firstIdx];
+        const secondWp = waypoints[indices[1]];
+
+        const p1 = turf.point([firstWp.lng, firstWp.lat]);
+        const p2 = turf.point([secondWp.lng, secondWp.lat]);
+        const mid = turf.midpoint(p1, p2);
+        const [midLng, midLat] = mid.geometry.coordinates;
+
+        const newWp = {
+            lat: midLat,
+            lng: midLng,
+            // Inherit attributes from first waypoint
+            altitude: firstWp.altitude,
+            speed: firstWp.speed,
+            gimbalPitch: firstWp.gimbalPitch,
+            heading: firstWp.heading,
+            straightenLegs: firstWp.straightenLegs,
+            action: firstWp.action
+        };
+
+        // Insert at index + 1 (between them)
+        onInsert(firstIdx + 1, newWp);
+    };
 
     // Initialize local state when selection changes
     useEffect(() => {
@@ -188,6 +227,15 @@ export default function EditSelectedPanel({
                 >
                     <Save size={18} /> Update Point(s)
                 </button>
+
+                {canInsert && (
+                    <button
+                        onClick={handleInsert}
+                        className="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 p-2 rounded flex items-center justify-center gap-2 transition-colors font-medium border border-blue-200"
+                    >
+                        <Plus size={16} /> Insert Waypoint
+                    </button>
+                )}
 
                 <button onClick={onDelete} className="w-full bg-red-100 hover:bg-red-200 text-red-600 p-2 rounded flex items-center justify-center gap-2 transition-colors font-medium">
                     <Trash2 size={16} /> Delete Selected
