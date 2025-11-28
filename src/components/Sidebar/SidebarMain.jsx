@@ -525,6 +525,25 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
               className="accent-blue-600 w-4 h-4"
             />
           </div>
+
+          {settings.showFootprints && (() => {
+            // Calculate estimated footprint size
+            const hfov = settings.customFOV || 82.1;
+            const altitude = settings.altitude; // Already in metric if stored that way, or mixed. Store seems to keep metric.
+            // Store keeps metric.
+            const widthMeters = 2 * altitude * Math.tan((hfov * Math.PI) / 360);
+            const heightMeters = widthMeters * (3 / 4); // 4:3 Aspect Ratio
+
+            const wDisplay = toDisplay(widthMeters, settings.units).toFixed(1);
+            const hDisplay = toDisplay(heightMeters, settings.units).toFixed(1);
+            const unitLabel = settings.units === 'metric' ? 'm' : 'ft';
+
+            return (
+              <div className="mt-0 text-xs text-gray-500">
+                Est. Size: {wDisplay} x {hDisplay} {unitLabel}
+              </div>
+            );
+          })()}
         </Section>
 
         <Section title="Camera" icon={Camera} defaultOpen={true}>
