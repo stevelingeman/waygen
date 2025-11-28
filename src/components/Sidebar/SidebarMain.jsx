@@ -90,11 +90,15 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
 
     if (!polygonToUse) return alert("Draw a shape first!");
 
+    // Get fresh settings from store to ensure we have the latest values, 
+    // especially when called immediately after updateSettings
+    const currentSettings = useMissionStore.getState().settings;
+
     // Resolve effective settings for generation
-    const dronePreset = getDronePreset(settings.selectedDrone);
-    const effectiveFOV = dronePreset?.hfov ?? settings.customFOV;
+    const dronePreset = getDronePreset(currentSettings.selectedDrone);
+    const effectiveFOV = dronePreset?.hfov ?? currentSettings.customFOV;
     const generationSettings = {
-      ...settings,
+      ...currentSettings,
       customFOV: effectiveFOV
     };
 
@@ -102,13 +106,13 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
     const initialPath = generatePhotogrammetryPath(polygonToUse, generationSettings);
 
     // Step 2: Calculate max safe speed based on photo interval
-    const photoInterval = settings.photoInterval;
+    const photoInterval = currentSettings.photoInterval;
     const { maxSpeed } = calculateMaxSpeed(initialPath, photoInterval);
 
     // Step 3: Regenerate path with calculated speed
     const finalSettings = {
       ...generationSettings,
-      speed: maxSpeed > 0 ? maxSpeed : settings.speed
+      speed: maxSpeed > 0 ? maxSpeed : currentSettings.speed
     };
     const finalPath = generatePhotogrammetryPath(polygonToUse, finalSettings);
 
@@ -119,6 +123,15 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
     setTimeout(() => {
       useMissionStore.getState().calculateMissionMetrics();
     }, 50);
+  };
+
+  const handleAutoGenerate = () => {
+    // Only auto-generate if we already have waypoints (meaning a path was generated before)
+    // and we have a valid polygon
+    const currentWaypoints = useMissionStore.getState().waypoints;
+    if (currentWaypoints.length > 0 && currentPolygon) {
+      handleGenerate();
+    }
   };
 
   const handleFileUpload = async (e) => {
@@ -347,7 +360,10 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
               <input
                 type="number"
                 value={toDisplay(settings.altitude, settings.units)}
-                onChange={e => updateSettings({ altitude: toMetric(Number(e.target.value), settings.units) })}
+                onChange={e => {
+                  updateSettings({ altitude: toMetric(Number(e.target.value), settings.units) });
+                  handleAutoGenerate();
+                }}
                 className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
@@ -376,6 +392,14 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
                   customFOV: fov,
                   photoInterval: newPhotoInterval
                 });
+                // We need to wait for the store update to propagate if we were using the hook's settings,
+                // but handleGenerate now pulls fresh state, so we can call it immediately.
+                // However, updateSettings is synchronous in Zustand, so state is updated.
+                // We just need to ensure handleAutoGenerate is called.
+                // Since we are inside the onChange, we can call it directly.
+                // But wait, we need to make sure the state is actually updated.
+                // Zustand set is synchronous.
+                handleAutoGenerate();
               }}
               className="w-full border rounded p-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"
             >
@@ -440,11 +464,29 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
             <>
               <div>
                 <label className="text-xs font-bold text-gray-500 mb-1 block">Side Overlap {settings.sideOverlap}%</label>
-                <input type="range" min="0" max="90" value={settings.sideOverlap} onChange={e => updateSettings({ sideOverlap: Number(e.target.value) })} className="w-full accent-blue-600" />
+                <input
+                  type="range"
+                  min="0"
+                  max="90"
+                  value={settings.sideOverlap}
+                  onChange={e => updateSettings({ sideOverlap: Number(e.target.value) })}
+                  onMouseUp={handleAutoGenerate}
+                  onTouchEnd={handleAutoGenerate}
+                  className="w-full accent-blue-600"
+                />
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-500 mb-1 block">Front Overlap {settings.frontOverlap}%</label>
-                <input type="range" min="0" max="90" value={settings.frontOverlap} onChange={e => updateSettings({ frontOverlap: Number(e.target.value) })} className="w-full accent-blue-600" />
+                <input
+                  type="range"
+                  min="0"
+                  max="90"
+                  value={settings.frontOverlap}
+                  onChange={e => updateSettings({ frontOverlap: Number(e.target.value) })}
+                  onMouseUp={handleAutoGenerate}
+                  onTouchEnd={handleAutoGenerate}
+                  className="w-full accent-blue-600"
+                />
               </div>
 
               <div className="flex items-center justify-between mt-2">
@@ -452,7 +494,10 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
                 <input
                   type="checkbox"
                   checked={settings.autoDirection}
-                  onChange={e => updateSettings({ autoDirection: e.target.checked })}
+                  onChange={e => {
+                    updateSettings({ autoDirection: e.target.checked });
+                    handleAutoGenerate();
+                  }}
                   className="accent-blue-600 w-4 h-4"
                 />
               </div>
@@ -467,6 +512,8 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
                   onChange={e => updateSettings({ angle: Number(e.target.value) })}
                   disabled={settings.autoDirection}
                   className={`w-full ${settings.autoDirection ? 'accent-gray-400 cursor-not-allowed' : 'accent-blue-600'}`}
+                  onMouseUp={handleAutoGenerate}
+                  onTouchEnd={handleAutoGenerate}
                 />
               </div>
             </>
@@ -508,6 +555,7 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
                 } else {
                   updateSettings({ reversePath: e.target.checked });
                 }
+                handleAutoGenerate();
               }}
               className="accent-blue-600 w-4 h-4"
             />
@@ -526,7 +574,10 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
             <input
               type="checkbox"
               checked={settings.generateEveryPoint}
-              onChange={e => updateSettings({ generateEveryPoint: e.target.checked })}
+              onChange={e => {
+                updateSettings({ generateEveryPoint: e.target.checked });
+                handleAutoGenerate();
+              }}
               className="accent-blue-600 w-4 h-4"
             />
           </div>
@@ -595,10 +646,10 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
 
 
 
-      </div>
+      </div >
 
       {/* Footer */}
-      <div className="p-4 border-t bg-gray-50">
+      < div className="p-4 border-t bg-gray-50" >
         <button onClick={handleGenerate} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-lg shadow-md mb-3 flex items-center justify-center gap-2 transition-all transform active:scale-95">
           <Play size={18} /> Generate Path
         </button>
@@ -667,12 +718,13 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
         <button onClick={handleDownloadClick} disabled={waypoints.length === 0} className="w-full mt-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold p-3 rounded-lg shadow-md flex items-center justify-center gap-2 transition-all">
           <Download size={18} /> Download KMZ
         </button>
-      </div>
+      </div >
 
       {/* Download Dialog */}
-      <DownloadDialog
+      < DownloadDialog
         isOpen={showDownloadDialog}
-        onClose={() => setShowDownloadDialog(false)}
+        onClose={() => setShowDownloadDialog(false)
+        }
         onDownload={handleDownloadConfirm}
         defaultFilename={getDefaultFilename()}
         defaultMissionEndAction={settings.missionEndAction}
@@ -680,7 +732,7 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
       />
 
       {/* Flight Warning Dialog */}
-      <FlightWarningDialog
+      < FlightWarningDialog
         isOpen={showFlightWarning}
         onClose={() => setShowFlightWarning(false)}
         warningLevel={useMissionStore.getState().getFlightWarningLevel()}
@@ -688,6 +740,6 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
         droneName={getDronePreset(settings.selectedDrone)?.name || 'Unknown Drone'}
         maxFlightTime={getDronePreset(settings.selectedDrone)?.maxFlightTime || 0}
       />
-    </div>
+    </div >
   );
 }
