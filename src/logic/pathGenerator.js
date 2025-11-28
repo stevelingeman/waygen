@@ -101,6 +101,10 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
 
   const imageWidth = (altitude * FOV_CONSTANT) * 2;
   const lineSpacingMeters = imageWidth * (1 - (sideOverlap / 100));
+  
+  // Calculate Front Spacing (needed for filtering short segments)
+  const groundHeight = imageWidth * (3 / 4);
+  const frontSpacingMeters = groundHeight * (1 - (frontOverlap / 100));
 
   // 2. Convert Spacing to DEGREES (Lat/Lng approximation)
   const lineSpacingDegrees = lineSpacingMeters / 111111;
@@ -172,9 +176,18 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
     currentY += lineSpacingDegrees;
   }
 
+  // Filter out short rows (Corner Clips)
+  // If a row is shorter than the forward spacing, it's likely a tiny corner clip that contributes little to coverage
+  // but distorts speed calculations.
+  const filteredFlightLines = flightLines.filter(lineCoords => {
+    const line = turf.lineString(lineCoords);
+    const length = turf.length(line, { units: 'meters' });
+    return length >= frontSpacingMeters;
+  });
+
   // Connect Lines
   let waypoints = [];
-  flightLines.forEach((lineCoords, index) => {
+  filteredFlightLines.forEach((lineCoords, index) => {
     let coords = (index % 2 === 1) ? lineCoords.reverse() : lineCoords;
 
     // Interpolate points if requested
@@ -182,12 +195,6 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
       const start = turf.point(coords[0]);
       const end = turf.point(coords[1]);
       const dist = turf.distance(start, end, { units: 'meters' });
-
-      // Calculate Front Spacing based on Overlap
-      // Height_ground = (2 * Altitude * tan(HFOV / 2)) * (3 / 4)
-      // Interval = Height_ground * (1 - (OverlapPercentage / 100))
-      const groundHeight = imageWidth * (3 / 4);
-      const frontSpacingMeters = groundHeight * (1 - (frontOverlap / 100));
 
       // Ensure we don't have infinite points if spacing is 0 (shouldn't happen with valid inputs)
       const safeSpacing = Math.max(1, frontSpacingMeters);
@@ -232,6 +239,32 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
       });
     });
   });
+
+  // Prune Short Transitions
+  // If the distance between the end of one row and the start of the next is less than the forward spacing,
+  // drop the end point of the current row to "merge" the segment.
+  // This effectively cuts the corner.
+  const prunedWaypoints = [];
+  for (let i = 0; i < waypoints.length; i++) {
+    const wp = waypoints[i];
+    
+    // Check if this is a row end and NOT the very last point of the mission
+    if (wp._isRowEnd && i < waypoints.length - 1) {
+      const nextWp = waypoints[i + 1];
+      const distToNext = turf.distance(
+        turf.point([wp.lng, wp.lat]), 
+        turf.point([nextWp.lng, nextWp.lat]), 
+        { units: 'meters' }
+      );
+
+      if (distToNext < frontSpacingMeters) {
+        // Skip adding this waypoint (drop it)
+        continue; 
+      }
+    }
+    prunedWaypoints.push(wp);
+  }
+  waypoints = prunedWaypoints;
 
   // Rotate back
   if (waypoints.length === 0) return [];
