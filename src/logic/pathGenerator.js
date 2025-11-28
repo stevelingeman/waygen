@@ -31,26 +31,32 @@ function generateOrbitPath(polygonFeature, settings) {
 
   const waypoints = [];
 
-  // Convert startAngle from spec (East=0, CCW) to Turf.js bearing (North=0, CW)
-  // Turf.js bearing starts at North (0), goes clockwise.
-  // Our spec: East (0), goes counter-clockwise.
-  // So, spec 0 (East) is turf 90. spec 90 (North) is turf 0.
-  // Conversion: turf_angle = (90 - spec_angle + 360) % 360
-  const turfStartAngle = (90 - startAngle + 360) % 360;
+  // Convert startAngle from spec (North=0, CW) to Turf.js bearing (North=0, CW)
+  // User expects 0 at 12 o'clock (North).
+  const turfStartAngle = startAngle % 360;
 
   // Calculate total sweep angle
   const totalSweepDegrees = 360 * actualNumberOfOrbits;
 
+  // Check if we should skip the last point (closed loop)
+  // If numberOfOrbits is an integer (e.g. 1.0, 2.0), the last point would overlap the first.
+  const isClosedLoop = Number.isInteger(actualNumberOfOrbits);
+
   // 3. Generate Points
-  for (let i = 0; i <= totalPointsToGenerate; i++) { // Include the end point for full rotations
+  for (let i = 0; i <= totalPointsToGenerate; i++) {
+    // Skip the last point if it's a closed loop to avoid duplication
+    if (isClosedLoop && i === totalPointsToGenerate) continue;
+
     // Calculate the angle relative to the startAngle
     let relativeAngle = (i / totalPointsToGenerate) * totalSweepDegrees;
 
     let currentTurfAngle;
     if (direction === 'clockwise') {
-      currentTurfAngle = (turfStartAngle - relativeAngle + 360 * 100) % 360; // Add large multiple of 360 to ensure positive modulo result
-    } else { // counter-clockwise
+       // Clockwise: Bearing Increases (0 -> 90)
       currentTurfAngle = (turfStartAngle + relativeAngle + 360) % 360;
+    } else { 
+      // Counter-clockwise: Bearing Decreases (0 -> 270)
+      currentTurfAngle = (turfStartAngle - relativeAngle + 360 * 100) % 360;
     }
     
     // Create point at distance 'radius' and bearing 'currentTurfAngle' from center

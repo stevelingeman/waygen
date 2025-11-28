@@ -483,6 +483,17 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
                 />
                 <p className="text-[10px] text-gray-400 mt-1">Distance between waypoints along the perimeter.</p>
               </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 mb-1 block">Start Angle {settings.startAngle}°</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="360"
+                  value={settings.startAngle}
+                  onChange={e => updateSettings({ startAngle: Number(e.target.value) })}
+                  className="w-full accent-blue-600"
+                />
+              </div>
             </div>
           )}
 
