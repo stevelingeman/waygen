@@ -4,7 +4,15 @@ import { saveAs } from 'file-saver';
 export const downloadKMZ = async (waypoints, settings, filename = "MiniMission", sessionData = null) => {
   const zip = new JSZip();
   const now = Date.now();
-  const { speed, straightenLegs, waypointAction, gimbalPitch, missionEndAction } = settings;
+  const { 
+    speed, 
+    straightenLegs, 
+    waypointAction, 
+    gimbalPitch, 
+    missionEndAction, 
+    rcLostAction, 
+    globalTransitionalSpeed 
+  } = settings;
 
   // 1. template.kml
   const templateXML = `<?xml version="1.0" encoding="UTF-8"?>
@@ -16,8 +24,8 @@ export const downloadKMZ = async (waypoints, settings, filename = "MiniMission",
       <wpml:flyToWaylineMode>safely</wpml:flyToWaylineMode>
       <wpml:finishAction>${missionEndAction}</wpml:finishAction>
       <wpml:exitOnRCLost>executeLostAction</wpml:exitOnRCLost>
-      <wpml:executeRCLostAction>hover</wpml:executeRCLostAction>
-      <wpml:globalTransitionalSpeed>${speed}</wpml:globalTransitionalSpeed>
+      <wpml:executeRCLostAction>${rcLostAction || 'hover'}</wpml:executeRCLostAction>
+      <wpml:globalTransitionalSpeed>${globalTransitionalSpeed !== undefined ? globalTransitionalSpeed : speed}</wpml:globalTransitionalSpeed>
       <wpml:droneInfo>
         <wpml:droneEnumValue>68</wpml:droneEnumValue>
         <wpml:droneSubEnumValue>0</wpml:droneSubEnumValue>
@@ -155,8 +163,8 @@ export const downloadKMZ = async (waypoints, settings, filename = "MiniMission",
       <wpml:flyToWaylineMode>safely</wpml:flyToWaylineMode>
       <wpml:finishAction>${missionEndAction}</wpml:finishAction>
       <wpml:exitOnRCLost>executeLostAction</wpml:exitOnRCLost>
-      <wpml:executeRCLostAction>hover</wpml:executeRCLostAction>
-      <wpml:globalTransitionalSpeed>${speed}</wpml:globalTransitionalSpeed>
+      <wpml:executeRCLostAction>${rcLostAction || 'hover'}</wpml:executeRCLostAction>
+      <wpml:globalTransitionalSpeed>${globalTransitionalSpeed !== undefined ? globalTransitionalSpeed : speed}</wpml:globalTransitionalSpeed>
       <wpml:droneInfo>
         <wpml:droneEnumValue>68</wpml:droneEnumValue>
         <wpml:droneSubEnumValue>0</wpml:droneSubEnumValue>

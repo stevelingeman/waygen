@@ -201,7 +201,7 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
     setShowDownloadDialog(true);
   };
 
-  const handleDownloadConfirm = ({ filename, missionEndAction }) => {
+  const handleDownloadConfirm = ({ filename, missionEndAction, rcLostAction, globalTransitionalSpeed }) => {
     // Update mission end action in settings
     updateSettings({ missionEndAction });
 
@@ -211,8 +211,16 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
       polygon: currentPolygon
     };
 
+    // Create a merged settings object for export
+    const exportSettings = {
+      ...settings,
+      missionEndAction,
+      rcLostAction,
+      globalTransitionalSpeed
+    };
+
     // Download with custom filename and session data
-    downloadKMZ(waypoints, settings, filename, sessionData);
+    downloadKMZ(waypoints, exportSettings, filename, sessionData);
   };
 
   // Mission statistics calculations
@@ -651,6 +659,7 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
         onDownload={handleDownloadConfirm}
         defaultFilename={getDefaultFilename()}
         defaultMissionEndAction={settings.missionEndAction}
+        units={settings.units}
       />
 
       {/* Flight Warning Dialog */}

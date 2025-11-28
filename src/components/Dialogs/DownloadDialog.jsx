@@ -1,24 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { toDisplay, toMetric } from '../../utils/units';
 
 export default function DownloadDialog({
     isOpen,
     onClose,
     onDownload,
     defaultFilename,
-    defaultMissionEndAction
+    defaultMissionEndAction,
+    units = 'metric'
 }) {
     const [filename, setFilename] = useState('');
     const [missionEndAction, setMissionEndAction] = useState('goHome');
+    const [rcLostAction, setRcLostAction] = useState('hover');
+    const [globalSpeed, setGlobalSpeed] = useState('');
     const [error, setError] = useState('');
 
     useEffect(() => {
         if (isOpen) {
             setFilename(defaultFilename);
             setMissionEndAction(defaultMissionEndAction);
+            setRcLostAction('hover');
+            // Default 5m/s converted to display units
+            setGlobalSpeed(toDisplay(5, units).toFixed(1));
             setError('');
         }
-    }, [isOpen, defaultFilename, defaultMissionEndAction]);
+    }, [isOpen, defaultFilename, defaultMissionEndAction, units]);
 
     const sanitizeFilename = (name) => {
         return name.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 100).trim();
@@ -35,7 +42,12 @@ export default function DownloadDialog({
             setError('Filename cannot be empty');
             return;
         }
-        onDownload({ filename, missionEndAction });
+        onDownload({ 
+            filename, 
+            missionEndAction,
+            rcLostAction,
+            globalTransitionalSpeed: toMetric(Number(globalSpeed), units)
+        });
         onClose();
     };
 
@@ -92,6 +104,39 @@ export default function DownloadDialog({
                         </p>
                     </div>
 
+                    {/* RC Signal Lost Action */}
+                    <div>
+                        <label className="text-sm font-bold text-gray-700 mb-2 block">
+                            Action when RC Signal Lost
+                        </label>
+                        <select
+                            value={rcLostAction}
+                            onChange={(e) => setRcLostAction(e.target.value)}
+                            className="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        >
+                            <option value="hover">Hover</option>
+                            <option value="goHome">Return to Home</option>
+                        </select>
+                    </div>
+
+                    {/* Global Mission Speed */}
+                    <div>
+                        <label className="text-sm font-bold text-gray-700 mb-2 block">
+                            Global Mission Speed ({units === 'metric' ? 'm/s' : 'ft/s'})
+                        </label>
+                        <input
+                            type="number"
+                            min="0.1"
+                            step="0.1"
+                            value={globalSpeed}
+                            onChange={(e) => setGlobalSpeed(e.target.value)}
+                            className="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                            Speed to fly to first waypoint
+                        </p>
+                    </div>
+
                     {/* Filename */}
                     <div>
                         <label className="text-sm font-bold text-gray-700 mb-2 block">
@@ -105,7 +150,6 @@ export default function DownloadDialog({
                                 className={`flex-1 border rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none ${error ? 'border-red-500' : ''
                                     }`}
                                 placeholder="Enter filename"
-                                autoFocus
                             />
                             <span className="text-sm text-gray-500 font-medium">.kmz</span>
                         </div>
