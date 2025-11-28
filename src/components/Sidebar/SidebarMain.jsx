@@ -501,8 +501,14 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
             <label className="text-sm text-gray-700">Reverse Path</label>
             <input
               type="checkbox"
-              checked={settings.reversePath}
-              onChange={e => updateSettings({ reversePath: e.target.checked })}
+              checked={settings.pathType === 'orbit' ? settings.direction === 'clockwise' : settings.reversePath}
+              onChange={e => {
+                if (settings.pathType === 'orbit') {
+                  updateSettings({ direction: settings.direction === 'counter-clockwise' ? 'clockwise' : 'counter-clockwise' });
+                } else {
+                  updateSettings({ reversePath: e.target.checked });
+                }
+              }}
               className="accent-blue-600 w-4 h-4"
             />
           </div>
