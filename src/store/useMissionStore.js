@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { bearing } from '@turf/turf';
 
-import { getDronePreset } from '../utils/dronePresets';
+import { getDronePreset, DRONE_PRESETS, DEFAULT_PHOTO_INTERVAL, mapLegacyDroneId, getDefaultDroneId } from '../utils/dronePresets';
 import { calculateMaxSpeed, calculateMissionTime, getFlightWarningLevel, calculateDistance } from '../utils/geospatial';
 import { generateUUID } from '../utils/uuid';
 
@@ -24,31 +24,37 @@ export const useMissionStore = create((set, get) => ({
   future: [],
 
   // Global Settings
-  settings: {
-    altitude: 60,
-    speed: 10,
-    gimbalPitch: -90,
-    customFOV: 82.1,
-    showFootprints: false,
-    footprintColor: '#22c55e',
-    sideOverlap: 80,
-    frontOverlap: 80,
-    pathType: 'grid',
-    angle: 0,
-    autoDirection: false,
-    generateEveryPoint: false,
-    reversePath: false,
-    waypointAction: 'none',
-    photoInterval: 2,
-    selectedDrone: 'dji_mini_5_pro',
-    straightenLegs: false,
-    units: 'metric',
-    orbitRadius: 50,
-    startAngle: 0, // 0-359 degrees, 0 is East, increasing counter-clockwise
-    direction: 'counter-clockwise', // 'clockwise' | 'counter-clockwise'
-    numberOfOrbits: 1.0, // Positive float, e.g., 0.5, 1.0, 2.3
-    missionEndAction: 'goHome', // 'goHome' | 'autoLand'
-  },
+  settings: (() => {
+    const defaultDroneId = getDefaultDroneId();
+    const mappedDroneId = mapLegacyDroneId(defaultDroneId);
+    const defaultPreset = DRONE_PRESETS[mappedDroneId];
+
+    return {
+      altitude: 60,
+      speed: 10,
+      gimbalPitch: -90,
+      customFOV: defaultPreset?.hfov || 82.1,
+      showFootprints: false,
+      footprintColor: '#22c55e',
+      sideOverlap: 80,
+      frontOverlap: 80,
+      pathType: 'grid',
+      angle: 0,
+      autoDirection: false,
+      generateEveryPoint: false,
+      reversePath: false,
+      waypointAction: 'none',
+      photoInterval: defaultPreset?.photoInterval || DEFAULT_PHOTO_INTERVAL,
+      selectedDrone: defaultDroneId, // Keep legacy ID for initial compatibility
+      straightenLegs: false,
+      units: 'metric',
+      orbitRadius: 50,
+      startAngle: 0, // 0-359 degrees, 0 is East, increasing counter-clockwise
+      direction: 'counter-clockwise', // 'clockwise' | 'counter-clockwise'
+      numberOfOrbits: 1.0, // Positive float, e.g., 0.5, 1.0, 2.3
+      missionEndAction: 'goHome', // 'goHome' | 'autoLand'
+    };
+  })(),
 
   // Actions
   setWaypoints: (waypoints) => set((state) => ({
@@ -229,8 +235,7 @@ export const useMissionStore = create((set, get) => ({
   // Mission Metrics Calculation
   calculateMissionMetrics: () => {
     const { waypoints, settings } = get();
-    const dronePreset = getDronePreset(settings.selectedDrone);
-    const photoInterval = dronePreset?.photoInterval || 5.5;
+    const photoInterval = settings.photoInterval;
 
     const { maxSpeed, minDistance } = calculateMaxSpeed(waypoints, photoInterval);
 

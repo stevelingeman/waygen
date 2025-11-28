@@ -12,7 +12,7 @@ export const FLIGHT_WARNING_THRESHOLD = 0.85;
 export const DEFAULT_PHOTO_INTERVAL = 5.5;
 
 // Takeoff and landing overhead time (seconds)
-export const TAKEOFF_LANDING_OVERHEAD = 120; // 2 minutes
+export const TAKEOFF_LANDING_OVERHEAD = 0; // 2 minutes
 
 /**
  * Drone preset configurations
@@ -31,13 +31,14 @@ export const DRONE_PRESETS = {
     },
     'mini-5-pro': {
         name: 'DJI Mini 5 Pro',
-        hfov: 82.1,
+        hfov: 84,
         photoInterval: 5.5,
-        maxFlightTime: 40
+        maxFlightTime: 40,
+        isDefault: true
     },
     'mavic-4-pro': {
         name: 'DJI Mavic 4 Pro',
-        hfov: 84,
+        hfov: 72,
         photoInterval: 5.5, // Placeholder - pending research
         maxFlightTime: 40
     },
@@ -47,6 +48,14 @@ export const DRONE_PRESETS = {
         photoInterval: 5.5, // Default conservative value
         maxFlightTime: null // No flight warnings
     }
+};
+
+/**
+ * Get the ID of the default drone preset
+ * @returns {string} Default drone ID
+ */
+export const getDefaultDroneId = () => {
+    return Object.keys(DRONE_PRESETS).find(id => DRONE_PRESETS[id].isDefault) || Object.keys(DRONE_PRESETS)[0];
 };
 
 /**

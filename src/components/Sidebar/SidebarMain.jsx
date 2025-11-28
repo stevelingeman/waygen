@@ -7,7 +7,7 @@ import { Trash2, Undo, Redo, Download, Play, Upload, ChevronDown, ChevronUp, Set
 import * as turf from '@turf/turf';
 import DownloadDialog from '../Dialogs/DownloadDialog';
 import FlightWarningDialog from '../Dialogs/FlightWarningDialog';
-import { getDronePreset } from '../../utils/dronePresets';
+import { getDronePreset, getDroneIds, DRONE_PRESETS, mapLegacyDroneId } from '../../utils/dronePresets';
 import { toDisplay, toMetric } from '../../utils/units';
 import { calculateMaxSpeed } from '../../utils/geospatial';
 import EditSelectedPanel from './EditSelectedPanel';
@@ -90,20 +90,27 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
 
     if (!polygonToUse) return alert("Draw a shape first!");
 
+    // Resolve effective settings for generation
+    const dronePreset = getDronePreset(settings.selectedDrone);
+    const effectiveFOV = dronePreset?.hfov ?? settings.customFOV;
+    const generationSettings = {
+      ...settings,
+      customFOV: effectiveFOV
+    };
+
     // Step 1: Generate initial path to get waypoint geometry
-    const initialPath = generatePhotogrammetryPath(polygonToUse, settings);
+    const initialPath = generatePhotogrammetryPath(polygonToUse, generationSettings);
 
     // Step 2: Calculate max safe speed based on photo interval
-    const dronePreset = getDronePreset(settings.selectedDrone);
-    const photoInterval = dronePreset?.photoInterval || 5.5;
+    const photoInterval = settings.photoInterval;
     const { maxSpeed } = calculateMaxSpeed(initialPath, photoInterval);
 
     // Step 3: Regenerate path with calculated speed
-    const settingsWithSpeed = {
-      ...settings,
+    const finalSettings = {
+      ...generationSettings,
       speed: maxSpeed > 0 ? maxSpeed : settings.speed
     };
-    const finalPath = generatePhotogrammetryPath(polygonToUse, settingsWithSpeed);
+    const finalPath = generatePhotogrammetryPath(polygonToUse, finalSettings);
 
     // Step 4: Set waypoints and update metrics
     setWaypoints(finalPath);
@@ -341,30 +348,50 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
           <div className="mt-4 border-t pt-3">
             <label className="text-xs font-bold text-gray-500 mb-1 block">Drone Model (FOV)</label>
             <select
-              value={settings.selectedDrone}
+              value={mapLegacyDroneId(settings.selectedDrone)}
               onChange={e => {
                 const val = e.target.value;
-                let fov = 82.1;
-                if (val === 'dji_mini_5_pro') fov = 84;
-                if (val === 'dji_mavic_4_pro') fov = 72;
-                if (val === 'custom') fov = settings.customFOV;
+                const preset = DRONE_PRESETS[val];
+                let fov;
+                let newPhotoInterval;
 
-                updateSettings({ selectedDrone: val, customFOV: fov });
+                if (val === 'custom') {
+                  fov = settings.customFOV;
+                  newPhotoInterval = settings.photoInterval; // Keep current custom interval
+                } else {
+                  fov = preset?.hfov || 82.1;
+                  newPhotoInterval = preset?.photoInterval || DEFAULT_PHOTO_INTERVAL;
+                }
+
+                updateSettings({
+                  selectedDrone: val,
+                  customFOV: fov,
+                  photoInterval: newPhotoInterval
+                });
               }}
               className="w-full border rounded p-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"
             >
-              <option value="dji_mini_4_pro">DJI Mini 4 Pro (82.1°)</option>
-              <option value="dji_mini_5_pro">DJI Mini 5 Pro (84°)</option>
-              <option value="dji_mavic_4_pro">DJI Mavic 4 Pro (72°)</option>
-              <option value="custom">Custom</option>
+              {getDroneIds().map(id => {
+                const preset = DRONE_PRESETS[id];
+                return (
+                  <option key={id} value={id}>
+                    {preset.name} {preset.hfov ? `(${preset.hfov}°)` : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
           <div className="mt-2">
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Photo Interval</label>
-            <div className="text-sm text-gray-700 bg-gray-50 border rounded p-1.5">
-              {getDronePreset(settings.selectedDrone)?.photoInterval || 5.5} seconds
-            </div>
+            <label className="text-xs font-bold text-gray-500 mb-1 block">Photo Interval (seconds)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0.1"
+              value={settings.photoInterval}
+              onChange={e => updateSettings({ photoInterval: Number(e.target.value) })}
+              className="w-full border rounded p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            />
           </div>
 
           {settings.selectedDrone === 'custom' && (
