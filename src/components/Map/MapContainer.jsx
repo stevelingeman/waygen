@@ -30,6 +30,13 @@ const TEARDROP_SELECTED_IMAGE = 'data:image/svg+xml;charset=utf-8,' + encodeURIC
 </svg>
 `);
 
+// Direction Arrow Icon (White with Blue outline)
+const ARROW_IMAGE = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 2 L22 22 L12 17 L2 22 Z" fill="#ffffff" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>
+</svg>
+`);
+
 const simpleStyles = [
   {
     "id": "gl-draw-line",
@@ -518,12 +525,20 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
       };
       loadIcon('teardrop', TEARDROP_IMAGE);
       loadIcon('teardrop-selected', TEARDROP_SELECTED_IMAGE);
+      loadIcon('arrow', ARROW_IMAGE);
 
       // Add Sources
       if (!map.current.getSource('mission-path')) {
         map.current.addSource('mission-path', {
           type: 'geojson',
           data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } }
+        });
+      }
+
+      if (!map.current.getSource('path-arrows')) {
+        map.current.addSource('path-arrows', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features: [] }
         });
       }
 
@@ -587,6 +602,23 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
         });
       }
 
+      // 3.5 Path Arrows (Direction Indicators)
+      if (!map.current.getLayer('path-arrows-symbol')) {
+        map.current.addLayer({
+          id: 'path-arrows-symbol',
+          type: 'symbol',
+          source: 'path-arrows',
+          layout: {
+            'icon-image': 'arrow',
+            'icon-size': 0.6,
+            'icon-allow-overlap': true,
+            'icon-rotate': ['get', 'rotation'],
+            'icon-rotation-alignment': 'map',
+            'icon-ignore-placement': true
+          }
+        });
+      }
+
       // 4. Waypoints (Symbol) - Should be on top
       if (!map.current.getLayer('waypoints-symbol')) {
         map.current.addLayer({
@@ -642,6 +674,23 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
           type: 'Feature',
           geometry: { type: 'LineString', coordinates: lineCoords }
         });
+
+        if (currentWaypoints.length >= 2) {
+          const arrowFeatures = [];
+          for (let i = 0; i < currentWaypoints.length - 1; i++) {
+            const p1 = turf.point([currentWaypoints[i].lng, currentWaypoints[i].lat]);
+            const p2 = turf.point([currentWaypoints[i + 1].lng, currentWaypoints[i + 1].lat]);
+            const midpoint = turf.midpoint(p1, p2);
+            const bearing = turf.bearing(p1, p2);
+            
+            arrowFeatures.push({
+              type: 'Feature',
+              geometry: midpoint.geometry,
+              properties: { rotation: bearing }
+            });
+          }
+          map.current.getSource('path-arrows').setData({ type: 'FeatureCollection', features: arrowFeatures });
+        }
       }
     };
 
@@ -740,6 +789,7 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
 
     const wpSource = map.current.getSource('waypoints');
     const pathSource = map.current.getSource('mission-path');
+    const arrowSource = map.current.getSource('path-arrows');
 
     if (wpSource) {
       const features = waypoints.map((wp, index) => ({
@@ -767,6 +817,29 @@ export default function MapContainer({ onPolygonDrawn, polygon }) {
           coordinates: lineCoords
         }
       });
+    }
+
+    if (arrowSource && waypoints.length >= 2) {
+      const arrowFeatures = [];
+      for (let i = 0; i < waypoints.length - 1; i++) {
+        const p1 = turf.point([waypoints[i].lng, waypoints[i].lat]);
+        const p2 = turf.point([waypoints[i + 1].lng, waypoints[i + 1].lat]);
+        
+        // Calculate midpoint and bearing
+        const midpoint = turf.midpoint(p1, p2);
+        const bearing = turf.bearing(p1, p2);
+        
+        arrowFeatures.push({
+          type: 'Feature',
+          geometry: midpoint.geometry,
+          properties: {
+            rotation: bearing
+          }
+        });
+      }
+      arrowSource.setData({ type: 'FeatureCollection', features: arrowFeatures });
+    } else if (arrowSource) {
+      arrowSource.setData({ type: 'FeatureCollection', features: [] });
     }
   }, [waypoints, selectedIds]);
 
