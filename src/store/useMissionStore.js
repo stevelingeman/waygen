@@ -42,6 +42,7 @@ export const useMissionStore = create((set, get) => ({
       angle: 0,
       autoDirection: false,
       generateEveryPoint: false,
+      eliminateExtraYaw: false,
       reversePath: false,
       waypointAction: 'none',
       photoInterval: defaultPreset?.photoInterval || DEFAULT_PHOTO_INTERVAL,

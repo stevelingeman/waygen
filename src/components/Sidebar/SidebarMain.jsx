@@ -584,6 +584,18 @@ export default function SidebarMain({ currentPolygon, setCurrentPolygon }) {
             />
           </div>
           <div className="flex items-center justify-between mt-3">
+            <label className="text-sm text-gray-700" title="Locks the drone heading to the first leg's direction for the entire mission. Useful for surveys where orientation doesn't matter.">Eliminate Extra Yaw Maneuvers</label>
+            <input
+              type="checkbox"
+              checked={settings.eliminateExtraYaw}
+              onChange={e => {
+                updateSettings({ eliminateExtraYaw: e.target.checked });
+                handleAutoGenerate();
+              }}
+              className="accent-blue-600 w-4 h-4"
+            />
+          </div>
+          <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-2">
               <label className="text-sm text-gray-700">Show Image Footprints</label>
               {settings.showFootprints && (

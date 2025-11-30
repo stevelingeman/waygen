@@ -92,7 +92,7 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
     return generateOrbitPath(polygonFeature, settings);
   }
 
-  const { altitude, sideOverlap, frontOverlap, angle, gimbalPitch, autoDirection, generateEveryPoint, reversePath, speed, straightenLegs, waypointAction } = settings;
+  const { altitude, sideOverlap, frontOverlap, angle, gimbalPitch, autoDirection, generateEveryPoint, reversePath, speed, straightenLegs, waypointAction, eliminateExtraYaw } = settings;
   // ... (rest of existing grid logic)
   // 1. Calculate Line Spacing in METERS
   // Use customFOV from settings (defaulting to 82.1 if missing)
@@ -283,21 +283,35 @@ export function generatePhotogrammetryPath(polygonFeature, settings) {
   }
 
   // Calculate Headings (Point to next waypoint)
+  let lockedHeading = null;
+
   for (let i = 0; i < waypoints.length; i++) {
     const isEffectiveRowEnd = reversePath ? waypoints[i]._isRowStart : waypoints[i]._isRowEnd;
+    let segmentHeading = 0;
 
     if (isEffectiveRowEnd && i > 0) {
       // If it's the end of a row, retain the heading of the previous point (the row's heading)
       // This prevents the camera from turning towards the next row's start point
-      waypoints[i].heading = waypoints[i - 1].heading;
+      segmentHeading = waypoints[i - 1].heading;
     } else if (i < waypoints.length - 1) {
       const start = turf.point([waypoints[i].lng, waypoints[i].lat]);
       const end = turf.point([waypoints[i + 1].lng, waypoints[i + 1].lat]);
-      waypoints[i].heading = Math.round(turf.bearing(start, end));
+      segmentHeading = Math.round(turf.bearing(start, end));
     } else {
       // Last point of the entire path inherits the heading of the segment leading up to it
-      if (i > 0) waypoints[i].heading = waypoints[i - 1].heading;
+      if (i > 0) segmentHeading = waypoints[i - 1].heading;
     }
+
+    if (eliminateExtraYaw) {
+      // If this is the first point (or first calculation), set the locked heading
+      if (lockedHeading === null) {
+        lockedHeading = segmentHeading;
+      }
+      waypoints[i].heading = lockedHeading;
+    } else {
+      waypoints[i].heading = segmentHeading;
+    }
+
     // Remove temporary flags
     delete waypoints[i]._isRowEnd;
     delete waypoints[i]._isRowStart;
