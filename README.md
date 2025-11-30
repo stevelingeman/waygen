@@ -173,6 +173,28 @@ Calculated based on Altitude and Horizontal Field of View (HFOV).
 
 ---
 
+## 📝 KMZ Export Specifications
+
+The exporter adjusts WPML (Waypoint Markup Language) parameters based on the **"Straighten Legs"** setting to control drone flight behavior.
+
+### Curved Paths (Default)
+Optimized for continuous motion and smooth video.
+- **Line Mode**: `<wpml:useStraightLine>0</wpml:useStraightLine>`
+- **Heading**: `<wpml:waypointHeadingMode>smoothTransition</wpml:waypointHeadingMode>` (Always smooth transition, regardless of curve/straight)
+- **Turn Mode**: 
+  - Start/End: `toPointAndStopWithContinuityCurvature`
+  - Intermediate: `toPointAndPassWithContinuityCurvature`
+- **Behavior**: Drone flies through waypoints without stopping, blending headings for smooth cinematic movement.
+
+### Straight Paths (Straighten Legs)
+Optimized for precise photogrammetry and grid surveys.
+- **Line Mode**: `<wpml:useStraightLine>1</wpml:useStraightLine>`
+- **Heading**: `<wpml:waypointHeadingMode>smoothTransition</wpml:waypointHeadingMode>` (Always smooth transition, regardless of curve/straight)
+- **Turn Mode**: `toPointAndStopWithDiscontinuityCurvature` (All points)
+- **Behavior**: Drone stops at each waypoint, aligns heading with the next path segment, and flies a strictly straight line.
+
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

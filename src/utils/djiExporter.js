@@ -139,6 +139,23 @@ export const downloadKMZ = async (waypoints, settings, filename = "MiniMission",
         ${actions}
       </wpml:actionGroup>` : "";
 
+    // Determine turn mode and heading params based on straight vs curved
+    let waypointTurnMode = 'toPointAndPassWithContinuityCurvature';
+    let useStraightLine = 0;
+
+    if (effectiveStraightenLegs) {
+      waypointTurnMode = 'toPointAndStopWithDiscontinuityCurvature';
+      useStraightLine = 1;
+    } else {
+      // Curved logic
+      useStraightLine = 0;
+      if (isFirst || isLast) {
+        waypointTurnMode = 'toPointAndStopWithContinuityCurvature';
+      } else {
+        waypointTurnMode = 'toPointAndPassWithContinuityCurvature';
+      }
+    }
+
     placemarks += `
     <Placemark>
       <Point><coordinates>${wp.lng},${wp.lat},0</coordinates></Point>
@@ -151,7 +168,11 @@ export const downloadKMZ = async (waypoints, settings, filename = "MiniMission",
         <wpml:waypointHeadingAngleEnable>0</wpml:waypointHeadingAngleEnable>
         <wpml:waypointHeadingPathMode>followBadArc</wpml:waypointHeadingPathMode>
       </wpml:waypointHeadingParam>
-      <wpml:useStraightLine>${effectiveStraightenLegs ? 1 : 0}</wpml:useStraightLine>
+      <wpml:waypointTurnParam>
+        <wpml:waypointTurnMode>${waypointTurnMode}</wpml:waypointTurnMode>
+        <wpml:waypointTurnDampingDist>0</wpml:waypointTurnDampingDist>
+      </wpml:waypointTurnParam>
+      <wpml:useStraightLine>${useStraightLine}</wpml:useStraightLine>
       ${actionGroupXML}
     </Placemark>`;
   });
